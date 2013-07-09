@@ -1,0 +1,89 @@
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, target-densitydpi=medium-dpi" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+	<meta name="format-detection" content="telephone=no" />
+</head>
+<body>
+	<style>
+		body {
+			margin: 0px;
+			padding: 0px;
+		}
+	</style>
+
+
+
+	<script type="text/javascript" src="../boxspring.js"></script>
+	<script type="text/javascript">
+
+		var View             = boxspring.view.View
+		var Window           = boxspring.view.Window
+		var Rect             = boxspring.geom.Rect
+		var Size             = boxspring.geom.Size
+		var Point            = boxspring.geom.Point
+
+		var LinearLayout = boxspring.layout.LinearLayout
+
+		var win = new Window()
+		win.layout = new LinearLayout()
+		win.layout.orientation = 'vertical'
+	//	win.layout.contentVerticalAlignment = 'center'
+		//win.layout.contentHorizontalAlignment = 'end'
+	//	win.layout.contentVerticalAlignment = 'end'
+	//	win.padding = 50
+
+		win.borderWidth = 50
+		win.borderColor = 'rgba(255, 0, 0, 0.25)'
+
+		win.size.x = 'auto'
+		win.size.y = 'auto'
+
+		win.backgroundColor = 'rgba(255, 0, 0, 0.25)'
+
+		var view1 = new View()
+		view1.backgroundColor = 'rgba(0, 255, 0, 0.25)'
+		view1.size.x = 200
+		view1.size.y = 100
+		// view1.position.x = 250
+		// view1.position.y = 250
+		win.addChild(view1)
+
+		var view2 = new View()
+		view2.backgroundColor = 'rgba(0, 0, 255, 0.25)'
+		view2.size.x = 200
+		view2.size.y = 100
+		// view2.position.x = 150
+		// view2.position.y = 150
+		win.addChild(view2)
+
+		var view3 = new View()
+		view3.backgroundColor = 'rgba(255, 0, 255, 0.25)'
+		view3.size.x = 200
+		view3.size.y = 'fill'
+		// view3.position.x = 100
+		// view3.position.y = 100
+		win.addChild(view3)
+
+		var view4 = new View()
+		view4.backgroundColor = 'rgba(255, 255, 255, 0.25)'
+		view4.size.x = 100
+		view4.size.y = 100
+		view4.position.x = 0
+		view4.position.y = 0
+		win.addChild(view4)
+
+		var animation = new boxspring.animation.PropertyAnimation()
+		animation.property = 'position.x'
+		animation.view = view4
+		animation.from = 0
+		animation.to = 500
+
+		// new Canvas2DRenderer(win)
+
+	</script>
+
+</body>
+</html>

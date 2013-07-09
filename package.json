@@ -1,0 +1,23 @@
+{
+	"name": "boxspring",
+	"description": "Canvas based mobile application framework with iOS native bridge",
+	"version": "0.0.1",
+	"main": "./lib/main.js",
+	"license": "MIT",
+	"keywords": [],
+	"author": "Jean-Philippe Dery <jeanphilippe.dery@gmail.com>",
+	"dependencies": {
+		"cubic-bezier": "0.1",
+		"lodash": "1.3.1"
+	},
+	"devDependencies": {
+		"expect.js": "0.2",
+		"mocha": "1.6",
+		"sinon": "1.5.2",
+		"wrapup": "0.10.3"
+
+	},
+	"engines": {
+		"node": "*"
+	}
+}
