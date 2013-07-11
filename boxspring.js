@@ -3277,7 +3277,7 @@
             },
             start: function() {
                 PropertyAnimation.parent.start.call(this);
-                RenderLoop.run(this.bind("step"));
+                RenderLoop.run(this.bind("step"), RenderLoop.ANIMATION_PRIORITY);
                 this.__run = true;
                 return this;
             },
@@ -3289,7 +3289,7 @@
             step: function(now) {
                 PropertyAnimation.parent.step.call(this, now);
                 if (this.__run) {
-                    RenderLoop.run(this.bind("step"));
+                    RenderLoop.run(this.bind("step"), RenderLoop.ANIMATION_PRIORITY);
                 }
             },
             __run: false
@@ -3395,7 +3395,7 @@
             updateLayout: function(children) {
                 switch (this.orientation) {
                   case "vertical":
-                    this.updateLayoutVertically(children);
+                    this.__updateLayoutVertically(children);
                     break;
                   case "horizontal":
                     this.__updateLayoutHorizontally(children);
@@ -3423,6 +3423,7 @@
                 var freeSpace = contentSizeX;
                 var fluidItems = [];
                 var fluidSpace = 0;
+                var fluidCount = 0;
                 for (var i = 0; i < children.length; i++) {
                     var child = children[i];
                     var sizeX = child.size.x;
@@ -3453,7 +3454,8 @@
                     child.measuredSize.x = measuredSizeX;
                     child.measuredSize.y = measuredSizeY;
                 }
-                fluidSpace = freeSpace / fluidItems.length;
+                fluidCount = fluidItems.length;
+                fluidSpace = freeSpace / fluidCount;
                 for (var i = 0; i < fluidItems.length; i++) {
                     var child = fluidItems[i];
                     var maxSizeX = child.maxSize.x;
@@ -3466,6 +3468,8 @@
                     child.measuredSize.x = space;
                     usedSpace += space;
                     freeSpace -= space;
+                    fluidCount--;
+                    fluidSpace = freeSpace / fluidCount;
                 }
                 var offset = 0;
                 switch (contentAlignmentX) {
@@ -3507,7 +3511,7 @@
                 }
                 return this;
             },
-            updateLayoutVertically: function(children) {
+            __updateLayoutVertically: function(children) {
                 var contentAlignmentY = this.contentVerticalAlignment;
                 var contentAlignmentX = this.contentHorizontalAlignment;
                 var border = this.view.borderWidth;
@@ -3521,6 +3525,7 @@
                 var freeSpace = contentSizeY;
                 var fluidItems = [];
                 var fluidSpace = 0;
+                var fluidCount = 0;
                 for (var i = 0; i < children.length; i++) {
                     var child = children[i];
                     var sizeX = child.size.x;
@@ -3551,7 +3556,8 @@
                     child.measuredSize.x = measuredSizeX;
                     child.measuredSize.y = measuredSizeY;
                 }
-                fluidSpace = freeSpace / fluidItems.length;
+                fluidCount = fluidItems.length;
+                fluidSpace = freeSpace / fluidCount;
                 for (var i = 0; i < fluidItems.length; i++) {
                     var child = fluidItems[i];
                     var maxSizeX = child.maxSize.x;
@@ -3564,6 +3570,8 @@
                     child.measuredSize.y = space;
                     usedSpace += space;
                     freeSpace -= space;
+                    fluidCount--;
+                    fluidSpace = freeSpace / fluidCount;
                 }
                 var offset = 0;
                 switch (contentAlignmentY) {
