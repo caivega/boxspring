@@ -7,4 +7,14 @@
  */
 var Window = boxspring.override('boxspring.view.Window', {
 
+	constructor: function() {
+		Window.parent.constructor.call(this)
+		window.addEventListener('resize', this.bind('__onWindowResize'))
+		return this
+	},
+
+	__onWindowResize: function() {
+		this.scheduleLayout()
+	}
+
 })

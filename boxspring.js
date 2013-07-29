@@ -17,8 +17,8 @@
         require("g");
         require("j");
         require("l");
-        require("u");
-        require("x");
+        require("w");
+        require("z");
         module.exports = boxspring;
     },
     "1": function(require, module, exports, global) {
@@ -27,6 +27,16 @@
             global.boxspring = {};
         }
         global._ = require("2");
+        _.mixin({
+            include: function(array, value) {
+                var index = _.indexOf(array, value);
+                if (index < 0) array.push(value);
+            },
+            remove: function(array, value) {
+                var index = _.indexOf(array, value);
+                if (index > -1) array.splice(index, 1);
+            }
+        });
         boxspring.version = "0.0.1-dev";
         require("3");
         require("4");
@@ -1922,7 +1932,7 @@
     "6": function(require, module, exports, global) {
         "use strict";
         var has = _.has;
-        var forOwn = _.each;
+        var forOwn = _.forOwn;
         boxspring.override = function(name, prototype) {
             var inherits = boxspring.constructors[name];
             if (inherits == null) {
@@ -1968,10 +1978,10 @@
             var properties = parent ? parent.constructor.$properties : null;
             each(object, function(val, key) {
                 var name = "__" + key;
-                var value = has(val, "value") ? val.value : has(properties, "value") ? properties.value : null;
-                var write = has(val, "write") ? val.write : has(properties, "write") ? properties.write : true;
-                var clone = has(val, "clone") ? val.clone : has(properties, "clone") ? properties.clone : false;
-                var check = has(val, "check") ? val.check : has(properties, "check") ? properties.check : function(value) {
+                var value = has(val, "value") ? val.value : has(properties, name) && has(properties[name], "value") ? properties[name].value : null;
+                var write = has(val, "write") ? val.write : has(properties, name) && has(properties[name], "write") ? properties[name].write : true;
+                var clone = has(val, "clone") ? val.clone : has(properties, name) && has(properties[name], "clone") ? properties[name].clone : false;
+                var check = has(val, "check") ? val.check : has(properties, name) && has(properties[name], "check") ? properties[name].check : function(value) {
                     return value;
                 };
                 var setup = function() {
@@ -2422,8 +2432,6 @@
     },
     d: function(require, module, exports, global) {
         "use strict";
-        var Size = boxspring.geom.Size;
-        var Point = boxspring.geom.Point;
         var Rectangle = boxspring.define("boxspring.geom.Rectangle", {
             statics: {
                 union: function(r1, r2) {
@@ -2431,18 +2439,18 @@
                     var y1 = Math.min(r1.origin.y, r2.origin.y);
                     var x2 = Math.max(r1.origin.x + r1.size.x, r2.origin.x + r2.size.x);
                     var y2 = Math.max(r1.origin.y + r1.size.y, r2.origin.x + r2.size.y);
-                    return new Rectangle(x1, y1, x2 - x1, y2 - y1);
+                    return new boxspring.geom.Rectangle(x1, y1, x2 - x1, y2 - y1);
                 }
             },
             properties: {
                 origin: {
                     value: function() {
-                        return new Point(0, 0);
+                        return new boxspring.geom.Point(0, 0);
                     }
                 },
                 size: {
                     value: function() {
-                        return new Size(0, 0);
+                        return new boxspring.geom.Size(0, 0);
                     }
                 }
             },
@@ -2646,6 +2654,7 @@
                 }
             },
             constructor: function(type, bubbleable, cancelable) {
+                Event.parent.constructor.call(this);
                 this.__type = type;
                 this.__bubbleable = bubbleable;
                 this.__cancelable = cancelable;
@@ -2676,7 +2685,6 @@
     },
     i: function(require, module, exports, global) {
         "use strict";
-        var Event = boxspring.event.Event;
         var slice = Array.prototype.slice;
         var Emitter = boxspring.define("boxspring.event.Emitter", {
             properties: {
@@ -2710,7 +2718,8 @@
                         return this;
                     }
                 }
-                var events = this.__listeners[type];
+                var listeners = this.__listeners || (this.__listeners = {});
+                var events = listeners[type];
                 if (events === undefined) return this;
                 return events.indexOf(listener) > -1;
             },
@@ -2760,7 +2769,7 @@
             },
             emit: function(event) {
                 if (typeof event === "string") {
-                    event = new Event(event, false, true);
+                    event = new boxspring.event.Event(event, false, true);
                 }
                 var parameters = slice.call(arguments, 1);
                 if (parameters.length) {
@@ -2827,7 +2836,7 @@
                         this.__reschedule = true;
                     }
                 }
-                priority = priority || 0;
+                priority = priority == null ? RenderLoop.DEFAULT_PRIORITY : priority;
                 var index = this.__callbacks.indexOf(callback);
                 if (index > -1) return this;
                 var index = this.__priority.indexOf(priority);
@@ -2886,6 +2895,7 @@
             __reschedule: false
         });
         var instance = new RenderLoop;
+        RenderLoop.DEFAULT_PRIORITY = 50;
         RenderLoop.ANIMATION_PRIORITY = 250;
         RenderLoop.RENDER_PRIORITY = 500;
         var find = _.find;
@@ -2896,17 +2906,97 @@
     l: function(require, module, exports, global) {
         "use strict";
         require("m");
+        require("n");
         require("o");
         require("p");
         require("q");
         require("r");
-        require("s");
         require("t");
+        require("u");
+        require("v");
     },
     m: function(require, module, exports, global) {
         "use strict";
-        var bezier = require("n");
-        var Animation = boxspring.define("boxspring.animation.Animation", {
+        var TypeEvaluator = boxspring.define("boxspring.animation.TypeEvaluator", {
+            evaluate: function(progress, from, to) {}
+        });
+    },
+    n: function(require, module, exports, global) {
+        "use strict";
+        var ColorEvaluator = boxspring.define("boxspring.animation.ColorEvaluator", {
+            inherit: boxspring.animation.TypeEvaluator,
+            evaluate: function(progress, from, to) {
+                return to;
+            }
+        });
+    },
+    o: function(require, module, exports, global) {
+        "use strict";
+        var ImageEvaluator = boxspring.define("boxspring.animation.ImageEvaluator", {
+            inherit: boxspring.animation.TypeEvaluator,
+            evaluate: function(progress, from, to) {
+                return to;
+            }
+        });
+    },
+    p: function(require, module, exports, global) {
+        "use strict";
+        var NumberEvaluator = boxspring.define("boxspring.animation.NumberEvaluator", {
+            inherit: boxspring.animation.TypeEvaluator,
+            evaluate: function(progress, from, to) {
+                return progress * (to - from) + from;
+            }
+        });
+    },
+    q: function(require, module, exports, global) {
+        "use strict";
+        var AnimationRunner = boxspring.define("boxspring.animation.AnimationRunner", {
+            statics: {
+                add: function(animation) {
+                    animation.on("start", onAnimationStart);
+                    animation.on("pause", onAnimationPause);
+                    animation.on("end", onAnimationEnd);
+                },
+                remove: function(animation) {
+                    animation.off("start", onAnimationStart);
+                    animation.off("pause", onAnimationPause);
+                    animation.off("end", onAnimationEnd);
+                }
+            }
+        });
+        var animations = [];
+        var play = function() {
+            boxspring.render.RenderLoop.run(tick, boxspring.render.RenderLoop.ANIMATION_PRIORITY);
+        };
+        var stop = function() {
+            boxspring.render.RenderLoop.cancel(tick);
+        };
+        var tick = function(now) {
+            for (var i = animations.length - 1; i >= 0; i--) {
+                var animation = animations[i];
+                if (animation) {
+                    animation.tick(now);
+                }
+            }
+            play();
+        };
+        var onAnimationStart = function(e) {
+            _.include(animations, e.source);
+            if (animations.length === 1) play();
+        };
+        var onAnimationPause = function(e) {
+            _.remove(animations, e.source);
+            if (animations.length === 0) stop();
+        };
+        var onAnimationEnd = function(e) {
+            _.remove(animations, e.source);
+            if (animations.length === 0) stop();
+        };
+    },
+    r: function(require, module, exports, global) {
+        "use strict";
+        var bezier = require("s");
+        var Animator = boxspring.define("boxspring.animation.Animator", {
             inherits: boxspring.event.Emitter,
             properties: {
                 duration: {
@@ -2919,87 +3009,115 @@
                     value: false
                 },
                 repeat: {
-                    value: 0
+                    value: 0,
+                    check: function(value) {
+                        if (value === true) return Infinity;
+                    }
                 },
                 running: {
                     value: false,
                     write: false
                 }
             },
+            constructor: function() {
+                Animator.parent.constructor.call(this);
+                this.on("start", this.bind("onStart"));
+                this.on("pause", this.bind("onPause"));
+                this.on("end", this.bind("onEnd"));
+                return this;
+            },
+            destroy: function() {
+                this.off("start", this.bind("onStart"));
+                this.off("pause", this.bind("onPause"));
+                this.off("end", this.bind("onEnd"));
+                Animator.parent.destroy.call(this);
+            },
             start: function() {
                 if (this.__running) return this;
-                this.__running = true;
-                this.__startTime = Date.now();
-                this.__tweenTime = Date.now();
-                this.__pauseTime = 0;
-                var type = typeof this.equation;
-                switch (type) {
-                  case "function":
-                    this.__compute = this.equation;
-                    break;
-                  case "string":
-                    var equation = equations[this.equation] || this.equation;
-                    equation = equation.replace(/\s+/g, "");
-                    equation = equation.match(/cubic-bezier\(([-.\d]+),([-.\d]+),([-.\d]+),([-.\d]+)\)/);
-                    equation = _.map(equation.slice(1), function(v) {
-                        return +v;
-                    });
-                    this.__compute = bezier(equation[0], equation[1], equation[2], equation[3], 1e3 / 60 / this.duration / 4);
-                    break;
+                var time = Date.now();
+                if (this.__pauseTime) {
+                    this.__pauseTime = 0;
+                    time = time - this.__progress * this.duration;
+                } else {
+                    this.__progressTo = 0;
+                    this.__progressFrom = 0;
                 }
+                this.__running = true;
+                this.__startTime = time;
+                this.__tweenTime = time;
+                this.__pauseTime = 0;
+                this.__progress = 0;
+                this.__curve = parse(this.equation, this.duration);
                 this.emit("start");
                 return this;
             },
             pause: function() {
+                if (this.__running === false) return this;
                 this.__running = false;
-                this.__pauseTime = Date.now();
                 this.__startTime = 0;
                 this.__tweenTime = 0;
+                this.__pauseTime = Date.now();
                 this.emit("pause");
                 return this;
             },
-            stop: function() {
+            end: function() {
+                if (this.running === false) return this;
+                var p = this.__progress;
+                var t = this.__progressTo;
+                if (p !== t) this.progress(t);
                 this.__running = false;
                 this.__startTime = 0;
-                this.__tweenTime = 0;
                 this.__pauseTime = 0;
+                this.__tweenTime = 0;
+                this.__progress = 0;
+                this.__progressTo = 0;
+                this.__progressFrom = 0;
                 this.emit("end");
                 return this;
             },
-            step: function(now) {
+            tick: function(now) {
                 var time = this.__tweenTime;
                 if (time) {
                     var factor = (now - time) / this.duration;
                     if (factor > 1) {
                         factor = 1;
                     }
-                    var f = 0;
-                    var t = 1;
+                    var f = null;
+                    var t = null;
+                    var p = null;
                     if (this.__reversed) {
-                        f = 1;
-                        t = 0;
+                        t = this.__progressTo = 0;
+                        f = this.__progressFrom = 1;
+                    } else {
+                        t = this.__progressTo = 1;
+                        f = this.__progressFrom = 0;
                     }
-                    var progress = compute(f, t, this.__compute(factor));
-                    this.update(progress);
+                    p = this.__progress = compute(f, t, this.__curve(factor));
+                    this.progress(p);
                     if (factor === 1) {
-                        this.__repeatCount++;
-                        if (this.__repeatCount > this.repeat) {
-                            this.stop();
+                        var repeat = this.reverse ? this.repeat * 2 - 1 : this.repeat;
+                        var repeated = ++this.__repeated;
+                        if (repeated >= repeat) {
+                            this.end();
                             return;
                         }
-                        if (this.reverse) {
-                            this.__reversed = !this.__reversed;
-                        }
+                        if (this.reverse) this.__reversed = !this.__reversed;
                         this.__tweenTime = now;
                     }
                 }
             },
-            update: function(progress) {},
-            __compute: null,
-            __startTime: null,
-            __pauseTime: null,
-            __tweenTime: null,
-            __repeatCount: 0,
+            progress: function(progress) {},
+            onStart: function(e) {},
+            onPause: function(e) {},
+            onEnd: function(e) {},
+            __curve: null,
+            __startTime: 0,
+            __pauseTime: 0,
+            __tweenTime: 0,
+            __progress: 0,
+            __progressTo: 0,
+            __progressFrom: 0,
+            __repeated: 0,
             __reversed: false
         });
         var equations = {
@@ -3012,8 +3130,15 @@
         var compute = function(from, to, delta) {
             return (to - from) * delta + from;
         };
+        var parse = function(equation, duration) {
+            if (typeof equation === "function") return equation;
+            equation = equations[equation] || equation;
+            equation = equation.replace(/\s+/g, "");
+            equation = equation.match(/cubic-bezier\(([-.\d]+),([-.\d]+),([-.\d]+),([-.\d]+)\)/);
+            return bezier(+equation[1], +equation[2], +equation[3], +equation[4], 1e3 / 60 / duration / 4);
+        };
     },
-    n: function(require, module, exports, global) {
+    s: function(require, module, exports, global) {
         module.exports = function(x1, y1, x2, y2, epsilon) {
             var curveX = function(t) {
                 var v = 1 - t;
@@ -3049,10 +3174,61 @@
             };
         };
     },
-    o: function(require, module, exports, global) {
+    t: function(require, module, exports, global) {
         "use strict";
-        var AnimationSet = boxspring.define("boxspring.animation.AnimationSet", {
-            inherits: boxspring.animation.Animation,
+        var AnimationRunner = boxspring.animation.AnimationRunner;
+        var ValueAnimator = boxspring.define("boxspring.animation.ValueAnimator", {
+            inherits: boxspring.animation.Animator,
+            properties: {
+                evaluator: {
+                    value: function() {
+                        return new boxspring.animation.NumberEvaluator;
+                    }
+                },
+                value: {},
+                from: {},
+                to: {}
+            },
+            constructor: function() {
+                ValueAnimator.parent.constructor.call(this);
+                this.on("update", this.bind("onUpdate"));
+                AnimationRunner.add(this);
+                return this;
+            },
+            destroy: function() {
+                AnimationRunner.remove(this);
+                this.off("update", this.bind("onUpdate"));
+                ValueAnimator.parent.destroy.call(this);
+            },
+            progress: function(progress) {
+                this.emit("update", this.value = this.evaluator.evaluate(progress, this.from, this.to));
+            },
+            onUpdate: function(value) {}
+        });
+    },
+    u: function(require, module, exports, global) {
+        "use strict";
+        var ObjectAnimator = boxspring.define("boxspring.animation.ObjectAnimator", {
+            inherits: boxspring.animation.ValueAnimator,
+            properties: {
+                target: {},
+                property: {}
+            },
+            progress: function(progress) {
+                PropertyAnimation.parent.progress.call(this, progress);
+                var target = this.target;
+                if (target == null) throw new Error("Missing target for object animator");
+                var property = this.property;
+                if (property == null) throw new Error("Missing property for object animator");
+                target.set(property, this.value);
+            }
+        });
+    },
+    v: function(require, module, exports, global) {
+        "use strict";
+        var AnimationRunner = boxspring.animation.AnimationRunner;
+        var AnimationGroup = boxspring.define("boxspring.animation.AnimationGroup", {
+            inherits: boxspring.animation.Animator,
             properties: {
                 animations: {
                     write: false,
@@ -3060,259 +3236,48 @@
                     value: []
                 }
             },
+            constructor: function() {
+                AnimationGroup.parent.constructor.call(this);
+                AnimationRunner.add(this);
+                return this;
+            },
+            destroy: function() {
+                AnimationRunner.remove(this);
+                AnimationGroup.parent.destroy.call(this);
+            },
             addAnimation: function(animation) {
-                animation.duration = this.duration;
-                animation.equation = this.equation;
-                animation.reverse = this.reverse;
-                animation.repeat = this.repeat;
-                include(this.__animations, animation);
+                _.include(this.__animations, animation);
                 return this;
             },
             removeAnimation: function(animation) {
-                remove(this.__animations, animation);
+                _.remove(this.__animations, animation);
                 return this;
             },
             removeAllAnimations: function(animation) {
                 this.__animations = [];
                 return this;
             },
-            start: function() {
-                Animation.parent.start.apply(this, arguments);
-                invoke(this.__animations, "start");
-                return this;
+            animationAt: function(index) {
+                return this.__animations[index] || null;
             },
-            pause: function() {
-                Animation.parent.pause.apply(this, arguments);
-                invoke(this.__animations, "pause");
-                return this;
-            },
-            stop: function() {
-                Animation.parent.stop.apply(this, arguments);
-                invoke(this.__animations, "stop");
-                return this;
-            },
-            step: function(now) {
-                AnimationSet.parent.step.apply(this, arguments);
-                invoke(this.__animations, "step", now);
-                return this;
+            progress: function(progress) {
+                _.invoke(this.__animations, "progress", progress);
             }
         });
-        var invoke = _.invoke;
-        var include = function(array, object) {
-            var index = array.indexOf(object);
-            if (index === -1) {
-                array.push(object);
-            }
-        };
-        var remove = function(array, object) {
-            var index = array.indexOf(object);
-            if (index > -1) {
-                array.splice(index, 1);
-            }
-        };
     },
-    p: function(require, module, exports, global) {
+    w: function(require, module, exports, global) {
         "use strict";
-        var AnimationMap = boxspring.define("boxspring.animation.AnimationMap", {
-            inherits: boxspring.animation.Animation,
-            properties: {
-                animations: {
-                    write: false,
-                    clone: true,
-                    value: {}
-                }
-            },
-            setAnimation: function(name, animation) {
-                var anim = this.__animations[name];
-                if (anim == null) {
-                    anim = this.__animations[name] = animation;
-                    anim.duration = this.duration;
-                    anim.equation = this.equation;
-                    anim.reverse = this.reverse;
-                    anim.repeat = this.repeat;
-                }
-                return this;
-            },
-            getAnimation: function(name) {
-                return this.__animations[name] || null;
-            },
-            removeAnimation: function(name) {
-                delete this.__animations[name];
-                return this;
-            },
-            removeAllAnimations: function() {
-                this.__animations = {};
-                return this;
-            },
-            start: function() {
-                Animation.parent.start.apply(this, arguments);
-                invoke(this.__animations, "start");
-                return this;
-            },
-            pause: function() {
-                Animation.parent.pause.apply(this, arguments);
-                invoke(this.__animations, "pause");
-                return this;
-            },
-            stop: function() {
-                Animation.parent.stop.apply(this, arguments);
-                invoke(this.__animations, "stop");
-                return this;
-            },
-            step: function(now) {
-                AnimationSet.parent.step.apply(this, arguments);
-                invoke(this.__animations, "step", now);
-                return this;
-            }
-        });
-        var invoke = _.invoke;
+        require("x");
+        require("y");
     },
-    q: function(require, module, exports, global) {
-        "use strict";
-        var AnimationMap = boxspring.animation.AnimationMap;
-        var PropertyAnimation = boxspring.animation.PropertyAnimation;
-        var AnimationTransaction = boxspring.define("boxspring.animation.AnimationTransaction", {
-            inherits: boxspring.animation.Animation,
-            statics: {
-                begin: function() {
-                    instances.push(new AnimationTransaction);
-                },
-                commit: function() {
-                    var animation = instances.pop();
-                    if (animation) {
-                        animation.start();
-                    }
-                },
-                isRunning: function() {},
-                getCurrent: function() {
-                    return instances[instances.length - 1] || null;
-                },
-                setDuration: function(duration) {
-                    var animation = AnimationTransaction.getCurrent();
-                    if (animation) {
-                        animation.duraction = duraction;
-                    }
-                },
-                setEquation: function(equation) {
-                    var animation = AnimationTransaction.getCurrent();
-                    if (animation) {
-                        animation.equation = equation;
-                    }
-                },
-                setReverse: function(reverse) {
-                    var animation = AnimationTransaction.getCurrent();
-                    if (animation) {
-                        animation.reverse = reverse;
-                    }
-                },
-                setRepeat: function(repeat) {
-                    var animation = AnimationTransaction.getCurrent();
-                    if (animation) {
-                        animation.repeat = repeat;
-                    }
-                }
-            },
-            constructor: function() {
-                AnimationTransaction.parent.constructor.apply(this);
-                this.__views = [];
-                this.__animations = [];
-                return this;
-            },
-            animate: function(view, property, from, to, animation) {
-                var animationMap = this.__animationForView(view);
-                if (animationMap === null) {
-                    animationMap = new AnimationMap;
-                }
-                var anim = animationMap.getAnimation(property);
-                if (anim === null) {
-                    anim = animation || new PropertyAnimation;
-                    anim.view = view;
-                    anim.from = from;
-                    anim.to = to;
-                    animationMap.setAnimation(property, anim);
-                } else {
-                    anim.to = to;
-                }
-                return this;
-            },
-            update: function(progress) {
-                invoke(this.__animations, "update", progress);
-            },
-            onPropertyChange: function() {},
-            __views: null,
-            __animations: null,
-            __animationForView: function(view) {
-                var index = this.__views.indexOf(view);
-                if (index > -1) {
-                    return this.__animations[index];
-                }
-                return null;
-            }
-        });
-        var instances = [];
-    },
-    r: function(require, module, exports, global) {
-        "use strict";
-        var PropertyAnimation = boxspring.define("boxspring.animation.PropertyAnimation", {
-            inherits: boxspring.animation.Animation,
-            properties: {
-                view: {
-                    value: null
-                },
-                property: {
-                    value: null
-                },
-                from: {
-                    value: 0
-                },
-                to: {
-                    value: 0
-                }
-            },
-            update: function(progress) {
-                var view = this.view;
-                if (view) {
-                    view.set(this.property, progress * (this.to - this.from) + this.from);
-                }
-            },
-            start: function() {
-                PropertyAnimation.parent.start.call(this);
-                RenderLoop.run(this.bind("step"), RenderLoop.ANIMATION_PRIORITY);
-                this.__run = true;
-                return this;
-            },
-            stop: function() {
-                PropertyAnimation.parent.stop.call(this);
-                this.__run = false;
-                return this;
-            },
-            step: function(now) {
-                PropertyAnimation.parent.step.call(this, now);
-                if (this.__run) {
-                    RenderLoop.run(this.bind("step"), RenderLoop.ANIMATION_PRIORITY);
-                }
-            },
-            __run: false
-        });
-        var RenderLoop = boxspring.render.RenderLoop;
-    },
-    s: function(require, module, exports, global) {},
-    t: function(require, module, exports, global) {},
-    u: function(require, module, exports, global) {
-        "use strict";
-        require("v");
-        require("w");
-    },
-    v: function(require, module, exports, global) {
+    x: function(require, module, exports, global) {
         "use strict";
         var Layout = boxspring.define("boxspring.layout.Layout", {
             properties: {
-                view: {
-                    value: null
-                }
+                target: {}
             },
             update: function() {
-                var view = this.view;
+                var view = this.target;
                 if (view === null) return this;
                 var border = view.borderWidth;
                 var outerSizeX = view.measuredSize.x - border * 2;
@@ -3377,7 +3342,7 @@
         });
         Layout.parse;
     },
-    w: function(require, module, exports, global) {
+    y: function(require, module, exports, global) {
         "use strict";
         var LinearLayout = boxspring.define("boxspring.layout.LinearLayout", {
             inherits: boxspring.layout.Layout,
@@ -3405,20 +3370,20 @@
             },
             onPropertyChange: function(target, property, newValue, oldValue) {
                 if (property === "orientation" || property === "contentVerticalAlignment" || property === "contentHorizontalAlignment") {
-                    if (this.view) this.view.scheduleLayout();
+                    if (this.target) this.target.scheduleLayout();
                 }
                 LinearLayout.parent.onPropertyChange.apply(this, arguments);
             },
             __updateLayoutHorizontally: function(children) {
                 var contentAlignmentY = this.contentVerticalAlignment;
                 var contentAlignmentX = this.contentHorizontalAlignment;
-                var border = this.view.borderWidth;
-                var paddingT = this.view.padding.top;
-                var paddingL = this.view.padding.left;
-                var paddingB = this.view.padding.bottom;
-                var paddingR = this.view.padding.right;
-                var contentSizeX = this.view.measuredSize.x - paddingL - paddingR - border * 2;
-                var contentSizeY = this.view.measuredSize.y - paddingT - paddingB - border * 2;
+                var border = this.target.borderWidth;
+                var paddingT = this.target.padding.top;
+                var paddingL = this.target.padding.left;
+                var paddingB = this.target.padding.bottom;
+                var paddingR = this.target.padding.right;
+                var contentSizeX = this.target.measuredSize.x - paddingL - paddingR - border * 2;
+                var contentSizeY = this.target.measuredSize.y - paddingT - paddingB - border * 2;
                 var usedSpace = 0;
                 var freeSpace = contentSizeX;
                 var fluidItems = [];
@@ -3459,9 +3424,22 @@
                 for (var i = 0; i < fluidItems.length; i++) {
                     var child = fluidItems[i];
                     var maxSizeX = child.maxSize.x;
-                    var maxSizeY = child.maxSize.y;
                     var minSizeX = child.minSize.x;
-                    var minSizeY = child.minSize.y;
+                    if (maxSizeX === "none") continue;
+                    var space = fluidSpace;
+                    if (maxSizeX !== "none" && space > maxSizeX) space = maxSizeX;
+                    if (minSizeX !== "none" && space < minSizeX) space = minSizeX;
+                    child.measuredSize.x = space;
+                    usedSpace += space;
+                    freeSpace -= space;
+                    fluidCount--;
+                    fluidSpace = freeSpace / fluidCount;
+                }
+                for (var i = 0; i < fluidItems.length; i++) {
+                    var child = fluidItems[i];
+                    var maxSizeX = child.maxSize.x;
+                    var minSizeX = child.minSize.x;
+                    if (maxSizeX !== "none") continue;
                     var space = fluidSpace;
                     if (maxSizeX !== "none" && space > maxSizeX) space = maxSizeX;
                     if (minSizeX !== "none" && space < minSizeX) space = minSizeX;
@@ -3514,13 +3492,13 @@
             __updateLayoutVertically: function(children) {
                 var contentAlignmentY = this.contentVerticalAlignment;
                 var contentAlignmentX = this.contentHorizontalAlignment;
-                var border = this.view.borderWidth;
-                var paddingT = this.view.padding.top;
-                var paddingL = this.view.padding.left;
-                var paddingB = this.view.padding.bottom;
-                var paddingR = this.view.padding.right;
-                var contentSizeX = this.view.measuredSize.x - paddingL - paddingR - border * 2;
-                var contentSizeY = this.view.measuredSize.y - paddingT - paddingB - border * 2;
+                var border = this.target.borderWidth;
+                var paddingT = this.target.padding.top;
+                var paddingL = this.target.padding.left;
+                var paddingB = this.target.padding.bottom;
+                var paddingR = this.target.padding.right;
+                var contentSizeX = this.target.measuredSize.x - paddingL - paddingR - border * 2;
+                var contentSizeY = this.target.measuredSize.y - paddingT - paddingB - border * 2;
                 var usedSpace = 0;
                 var freeSpace = contentSizeY;
                 var fluidItems = [];
@@ -3560,13 +3538,26 @@
                 fluidSpace = freeSpace / fluidCount;
                 for (var i = 0; i < fluidItems.length; i++) {
                     var child = fluidItems[i];
-                    var maxSizeX = child.maxSize.x;
                     var maxSizeY = child.maxSize.y;
-                    var minSizeX = child.minSize.x;
                     var minSizeY = child.minSize.y;
+                    if (maxSizeY === "none") continue;
                     var space = fluidSpace;
-                    if (maxSizeX !== "none" && space > maxSizeX) space = maxSizeX;
-                    if (minSizeX !== "none" && space < minSizeX) space = minSizeX;
+                    if (maxSizeY !== "none" && space > maxSizeY) space = maxSizeY;
+                    if (minSizeY !== "none" && space < minSizeY) space = minSizeY;
+                    child.measuredSize.y = space;
+                    usedSpace += space;
+                    freeSpace -= space;
+                    fluidCount--;
+                    fluidSpace = freeSpace / fluidCount;
+                }
+                for (var i = 0; i < fluidItems.length; i++) {
+                    var child = fluidItems[i];
+                    var maxSizeY = child.maxSize.y;
+                    var minSizeY = child.minSize.y;
+                    if (maxSizeY !== "none") continue;
+                    var space = fluidSpace;
+                    if (maxSizeY !== "none" && space > maxSizeY) space = maxSizeY;
+                    if (minSizeY !== "none" && space < minSizeY) space = minSizeY;
                     child.measuredSize.y = space;
                     usedSpace += space;
                     freeSpace -= space;
@@ -3615,24 +3606,193 @@
             }
         });
     },
-    x: function(require, module, exports, global) {
+    z: function(require, module, exports, global) {
         "use strict";
-        require("y");
-        require("z");
         require("10");
         require("11");
+        require("12");
+        require("13");
+        require("14");
+        require("15");
     },
-    y: function(require, module, exports, global) {
+    "10": function(require, module, exports, global) {
         "use strict";
-        var Size = boxspring.geom.Size;
-        var Point = boxspring.geom.Point;
-        var Matrix = boxspring.geom.Matrix;
-        var Rectangle = boxspring.geom.Rectangle;
-        var Thickness = boxspring.geom.Thickness;
-        var Position = boxspring.geom.Position;
-        var Layout = boxspring.layout.Layout;
+        var PropertyAnimation = boxspring.define("boxspring.view.animation.PropertyAnimation", {
+            inherits: boxspring.animation.ValueAnimator,
+            properties: {
+                view: {},
+                property: {}
+            },
+            onPropertyChange: function(target, property, value) {
+                PropertyAnimation.parent.onPropertyChange.apply(this, arguments);
+                if (property === "property" || property === "view" && value) {
+                    var view = this.view;
+                    if (view == null) return;
+                    var evaluator = view.animatedPropertyEvaluator(this.property);
+                    if (evaluator == null) throw new Error("Property " + this.property + "is not animatable");
+                    this.evaluator = evaluator;
+                }
+            },
+            onStart: function(e) {
+                this.view.emit("propertyanimationstart", this.property, this.from);
+            },
+            onUpdate: function(e) {
+                this.view.emit("propertyanimationupdate", this.property, this.value);
+            },
+            onEnd: function(e) {
+                this.view.emit("propertyanimationend", this.property, this.value);
+            }
+        });
+    },
+    "11": function(require, module, exports, global) {
+        "use strict";
+        var AnimationRunner = boxspring.animation.AnimationRunner;
+        var PropertyAnimation = boxspring.animation.PropertyAnimation;
+        var PropertyAnimationTransaction = boxspring.define("boxspring.view.animation.PropertyAnimationTransaction", {
+            inherits: boxspring.animation.AnimationGroup,
+            statics: {
+                setup: function(duration, equation) {
+                    transactionStatus = PropertyAnimationTransaction.STATUS_READING;
+                    var transaction = new PropertyAnimationTransaction;
+                    if (duration) transaction.duration = duration;
+                    if (equation) transaction.equation = equation;
+                    _.include(transactionStack, transaction);
+                    return this;
+                },
+                start: function() {
+                    transactionStatus = PropertyAnimationTransaction.STATUS_RUNNING;
+                    for (var i = 0; i < transactionStack.length; i++) {
+                        var transaction = transactionStack[i];
+                        if (transaction.running === false) {
+                            transaction.start();
+                        }
+                    }
+                },
+                animate: function(view, property, from, to) {
+                    var transaction = transactionStack[transactionStack.length - 1];
+                    if (transaction) {
+                        transaction.addAnimatedProperty(view, property, from, to);
+                    }
+                },
+                status: function() {
+                    return transactionStatus;
+                }
+            },
+            constructor: function() {
+                PropertyAnimationTransaction.parent.constructor.call(this);
+                this.__animatedViews = {};
+                this.__animatedItems = {};
+                this.__animatedProperties = {};
+                return this;
+            },
+            destroy: function() {
+                this.__animatedViews = null;
+                this.__animatedItems = null;
+                this.__animatedProperties = null;
+                PropertyAnimationTransaction.parent.destroy.call(this);
+            },
+            run: function() {},
+            addAnimatedProperty: function(view, property, from, to) {
+                this.__animatedViews[view.UID] = view;
+                var animations = this.__animatedProperties[property];
+                if (animations == null) {
+                    animations = this.__animatedProperties[property] = {};
+                }
+                for (var i = 0; i < transactionStack.length; i++) {
+                    var transaction = transactionStack[i];
+                    if (transaction === this) continue;
+                    var animation = transaction.animationForViewProperty(view, property);
+                    if (animation === null) continue;
+                    transaction.removeAnimatedProperty(view, property);
+                    animations[view.UID] = animation;
+                    if (animation.running) {
+                        animation.from = animation.value;
+                        animation.end();
+                    } else {
+                        animation.from = from;
+                    }
+                    this.__animatedItems[view.UID]++;
+                    break;
+                }
+                var animation = animations[view.UID];
+                if (animation == null) {
+                    animation = animations[view.UID] = new boxspring.view.animation.PropertyAnimation;
+                    animation.property = property;
+                    animation.view = view;
+                    animation.from = from;
+                    if (this.__animatedItems[view.UID] == null) {
+                        this.__animatedItems[view.UID] = 0;
+                    }
+                    this.__animatedItems[view.UID]++;
+                }
+                animation.to = to;
+                animation.__transaction = this;
+                this.addAnimation(animation);
+                return this;
+            },
+            removeAnimatedProperty: function(view, property) {
+                var animations = this.__animatedProperties[property];
+                if (animations == null) return this;
+                var animation = animations[view.UID];
+                if (animation == null) return this;
+                if (--this.__animatedItems[view.UID] === 0) {
+                    delete this.__animatedViews[view.UID];
+                    delete this.__animatedItems[view.UID];
+                }
+                delete animations[view.UID];
+                this.removeAnimation(animation);
+                animation.__transaction = null;
+                return this;
+            },
+            animationForViewProperty: function(view, property) {
+                var animations = this.__animatedProperties[property];
+                if (animations == null) return null;
+                return animations[view.UID] || null;
+            },
+            onStart: function(e) {
+                PropertyAnimationTransaction.parent.onStart.apply(this, arguments);
+                _.invoke(this.__animatedViews, "emit", "animationstart");
+            },
+            onPause: function(e) {},
+            onEnd: function(e) {
+                PropertyAnimationTransaction.parent.onEnd.apply(this, arguments);
+                _.invoke(this.__animatedViews, "emit", "animationend");
+                _.remove(transactionStack, e.source);
+                if (transactionStack.length === 0) {
+                    transactionStatus = PropertyAnimationTransaction.STATUS_NONE;
+                }
+            },
+            __animatedViews: null,
+            __animatedItems: null,
+            __animatedProperties: null
+        });
+        PropertyAnimationTransaction.STATUS_NONE = 0;
+        PropertyAnimationTransaction.STATUS_READING = 1;
+        PropertyAnimationTransaction.STATUS_RUNNING = 1;
+        var transactionStatus = PropertyAnimationTransaction.STATUS_NONE;
+        var transactionStack = [];
+    },
+    "12": function(require, module, exports, global) {
+        "use strict";
+        var PropertyAnimationTransaction = boxspring.view.animation.PropertyAnimationTransaction;
         var View = boxspring.define("boxspring.view.View", {
             inherits: boxspring.event.Emitter,
+            statics: {
+                setupAnimation: function(duration, equation) {
+                    if (layoutRoot) {
+                        layoutRoot.layoutIfNeeded();
+                    }
+                    PropertyAnimationTransaction.setup(duration, equation);
+                    return this;
+                },
+                startAnimation: function() {
+                    if (layoutRoot) {
+                        layoutRoot.layoutIfNeeded();
+                    }
+                    PropertyAnimationTransaction.start();
+                    return this;
+                }
+            },
             properties: {
                 name: {
                     value: ""
@@ -3659,7 +3819,7 @@
                 },
                 backgroundSize: {
                     value: function() {
-                        return new Size("auto", "auto");
+                        return new boxspring.geom.Size("auto", "auto");
                     }
                 },
                 backgroundClip: {
@@ -3684,17 +3844,17 @@
                 },
                 shadowOffset: {
                     value: function() {
-                        return new Point;
+                        return new boxspring.geom.Point;
                     }
                 },
                 layout: {
                     value: function() {
-                        return new Layout;
+                        return new boxspring.layout.LinearLayout;
                     }
                 },
                 transform: {
                     value: function() {
-                        return new Matrix;
+                        return new boxspring.geom.Matrix;
                     }
                 },
                 visible: {
@@ -3710,7 +3870,7 @@
                 },
                 margin: {
                     value: function() {
-                        return new Thickness;
+                        return new boxspring.geom.Thickness;
                     },
                     check: function(newValue, oldValue) {
                         if (typeof newValue === "number") {
@@ -3725,7 +3885,7 @@
                 },
                 padding: {
                     value: function() {
-                        return new Thickness;
+                        return new boxspring.geom.Thickness;
                     },
                     check: function(newValue, oldValue) {
                         if (typeof newValue === "number") {
@@ -3740,7 +3900,7 @@
                 },
                 position: {
                     value: function() {
-                        return new Position("auto");
+                        return new boxspring.geom.Position("auto");
                     },
                     check: function(newValue, oldValue) {
                         if (newValue === "auto") {
@@ -3753,29 +3913,32 @@
                         return newValue;
                     }
                 },
+                weight: {
+                    value: 1
+                },
                 size: {
                     value: function() {
-                        return new Size("fill", "fill");
+                        return new boxspring.geom.Size("fill", "fill");
                     }
                 },
                 minSize: {
                     value: function() {
-                        return new Size("none", "none");
+                        return new boxspring.geom.Size("none", "none");
                     }
                 },
                 maxSize: {
                     value: function() {
-                        return new Size("none", "none");
+                        return new boxspring.geom.Size("none", "none");
                     }
                 },
                 measuredSize: {
                     value: function() {
-                        return new Size;
+                        return new boxspring.geom.Size(-1, -1);
                     }
                 },
                 measuredOffset: {
                     value: function() {
-                        return new Point;
+                        return new boxspring.geom.Point(-1, -1);
                     }
                 }
             },
@@ -3788,6 +3951,8 @@
                 this.on("propertychange", "minSize.y", onPropertyChange);
                 this.on("propertychange", "maxSize.x", onPropertyChange);
                 this.on("propertychange", "maxSize.y", onPropertyChange);
+                this.on("propertychange", "shadowBlur", onPropertyChange);
+                this.on("propertychange", "shadowColor", onPropertyChange);
                 this.on("propertychange", "shadowOffset.x", onPropertyChange);
                 this.on("propertychange", "shadowOffset.y", onPropertyChange);
                 this.on("propertychange", "margin.top", onPropertyChange);
@@ -3802,6 +3967,13 @@
                 this.on("propertychange", "position.left", onPropertyChange);
                 this.on("propertychange", "position.right", onPropertyChange);
                 this.on("propertychange", "position.bottom", onPropertyChange);
+                this.on("propertychange", "measuredSize.x", onPropertyChange);
+                this.on("propertychange", "measuredSize.y", onPropertyChange);
+                this.on("propertychange", "measuredOffset.x", onPropertyChange);
+                this.on("propertychange", "measuredOffset.y", onPropertyChange);
+                this.on("propertyanimationstart", this.bind("onPropertyAnimationStart"));
+                this.on("propertyanimationupdate", this.bind("onPropertyAnimationUpdate"));
+                this.on("propertyanimationend", this.bind("onPropertyAnimationEnd"));
                 this.on("add", this.bind("onAdd"));
                 this.on("remove", this.bind("onRemove"));
                 this.on("addtoparent", this.bind("onAddToParent"));
@@ -3812,6 +3984,7 @@
                 this.on("touchstart", this.bind("onTouchStart"));
                 this.on("touchmove", this.bind("onTouchMove"));
                 this.on("touchend", this.bind("onTouchEnd"));
+                this.__animatedPropertyValues = {};
                 return this;
             },
             destroy: function() {
@@ -3823,6 +3996,8 @@
                 this.off("propertychange", "minSize.y", onPropertyChange);
                 this.off("propertychange", "maxSize.x", onPropertyChange);
                 this.off("propertychange", "maxSize.y", onPropertyChange);
+                this.off("propertychange", "shadowBlur", onPropertyChange);
+                this.off("propertychange", "shadowColor", onPropertyChange);
                 this.off("propertychange", "shadowOffset.x", onPropertyChange);
                 this.off("propertychange", "shadowOffset.y", onPropertyChange);
                 this.off("propertychange", "margin.top", onPropertyChange);
@@ -3837,6 +4012,13 @@
                 this.off("propertychange", "position.left", onPropertyChange);
                 this.off("propertychange", "position.right", onPropertyChange);
                 this.off("propertychange", "position.bottom", onPropertyChange);
+                this.off("propertychange", "measuredSize.x", onPropertyChange);
+                this.off("propertychange", "measuredSize.y", onPropertyChange);
+                this.off("propertychange", "measuredOffset.x", onPropertyChange);
+                this.off("propertychange", "measuredOffset.y", onPropertyChange);
+                this.off("propertyanimationstart", this.bind("onPropertyAnimationStart"));
+                this.off("propertyanimationupdate", this.bind("onPropertyAnimationUpdate"));
+                this.off("propertyanimationend", this.bind("onPropertyAnimationEnd"));
                 this.off("add", this.bind("onAdd"));
                 this.off("remove", this.bind("onRemove"));
                 this.off("addtoparent", this.bind("onAddToParent"));
@@ -3854,33 +4036,33 @@
                 return this.addChildAt(view, this.__children.length);
             },
             addChildAt: function(view, index) {
+                view.removeFromParent();
                 var children = this.__children;
                 if (index > children.length) {
                     index = children.length;
                 } else if (index < 0) {
                     index = 0;
                 }
-                view.removeFromParent();
                 children.splice(index, 1, view);
                 view.__setWindow(this.window);
                 view.__setParent(this);
                 view.__setParentReceiver(this);
-                this.emit("add", view);
                 this.scheduleLayout();
+                this.emit("add", view);
                 return this;
             },
             addChildBefore: function(view, before) {
-                var index = this.getChildIndex(before);
+                var index = this.childIndex(before);
                 if (index === null) return this;
                 return this.addChildAt(view, index);
             },
             addChildAfter: function(view, after) {
-                var index = this.getChildIndex(before);
+                var index = this.childIndex(before);
                 if (index === null) return this;
                 return this.addChildAt(view, index + 1);
             },
             removeChild: function(view) {
-                var index = this.getChildIndex(view);
+                var index = this.childIndex(view);
                 if (index === null) return this;
                 return this.removeChildAt(index);
             },
@@ -3892,8 +4074,8 @@
                 view.__setWindow(null);
                 view.__setParent(null);
                 view.__setParentReceiver(null);
-                this.emit("remove", view);
                 this.scheduleLayout();
+                this.emit("remove", view);
                 return this;
             },
             removeFromParent: function() {
@@ -3901,27 +4083,27 @@
                 if (parent) parent.removeChild(this);
                 return this;
             },
-            getChildIndex: function(view) {
+            childIndex: function(view) {
                 return this.__children.indexOf(view);
             },
-            getChildByName: function(name) {},
-            getChildAtIndex: function(index) {
+            childByName: function(name) {},
+            childAt: function(index) {
                 return this.__children[index] || null;
             },
-            getChildAtPoint: function(x, y) {
-                if (this.isPointInside(x, y) === false) return null;
+            childAtPoint: function(x, y) {
+                if (this.pointInside(x, y) === false) return null;
                 var children = this.__children;
                 for (var i = children.length - 1; i >= 0; i--) {
                     var child = children[i];
-                    if (child.isPointInside(x, y) === false) continue;
+                    if (child.pointInside(x, y) === false) continue;
                     var o = child.origin;
                     var px = x - o.x;
                     var py = y - o.y;
-                    return child.getChildAtPoint(px, py);
+                    return child.childAtPoint(px, py);
                 }
                 return this;
             },
-            isPointInside: function(x, y) {
+            pointInside: function(x, y) {
                 var point = arguments[0];
                 if (point instanceof Point) {
                     x = point.x;
@@ -3931,19 +4113,50 @@
                 var o = this.origin;
                 return x >= o.x && x <= o.x + s.x && y >= o.y && y <= o.y + s.y;
             },
-            reflowOnPropertyChange: function(property) {
-                if (property === "size" || property === "size.x" || property === "size.y" || property === "minSize" || property === "minSize.x" || property === "minSize.y" || property === "maxSize" || property === "maxSize.x" || property === "maxSize.y" || property === "visible" || property === "margin" || property === "margin.top" || property === "margin.left" || property === "margin.right" || property === "margin.bottom" || property === "position.top" || property === "position.left" || property === "position.right" || property === "position.bottom") {
-                    return true;
+            animate: function(property, value, duration, equation) {
+                View.beginAnimation(duration, equation);
+                this.set(property, value);
+                View.startAnimation();
+                return this;
+            },
+            animatedPropertyValue: function(property) {
+                var value = this.__animatedPropertyValues[property];
+                if (value == null) return this.get(property);
+                return value;
+            },
+            animatedPropertyEvaluator: function(property) {
+                switch (property) {
+                  case "backgroundColor":
+                  case "borderColor":
+                  case "shadowColor":
+                    return new boxspring.animation.ColorEvaluator;
+                  case "backgroundImage":
+                    return new boxspring.animation.ImageEvaluator;
+                  case "backgroundSize.x":
+                  case "backgroundSize.y":
+                  case "borderWidth":
+                  case "borderRadius":
+                  case "shadowBlur":
+                  case "shadowOffset.x":
+                  case "shadowOffset.y":
+                  case "opacity":
+                  case "measuredSize.x":
+                  case "measuredSize.y":
+                  case "measuredOffset.x":
+                  case "measuredOffset.y":
+                    return new boxspring.animation.NumberEvaluator;
                 }
-                return false;
+                return null;
+            },
+            propertyIsAnimatable: function(property) {
+                return animatableProperties.indexOf(property) !== -1;
+            },
+            reflowOnPropertyChange: function(property) {
+                return scheduleReflowProperties.indexOf(property) !== -1;
             },
             layoutOnPropertyChange: function(property) {
-                if (property === "measuredSize" || property === "measuredSize.x" || property === "measuredSize.y" || property === "borderWidth" || property === "padding" || property === "padding.top" || property === "padding.left" || property === "padding.right" || property === "padding.bottom" || property === "layout") {
-                    return true;
-                }
-                return false;
+                return scheduleLayoutProperties.indexOf(property) !== -1;
             },
-            redrawOnPropertyChange: function(property) {},
             scheduleReflow: function() {
                 var parent = this.parent;
                 if (parent) parent.scheduleLayout();
@@ -3953,90 +4166,88 @@
                 this.__layoutScheduled = true;
                 return this;
             },
-            scheduleRedraw: function(area) {
-                if (area) {
-                    if (this.__redrawArea === null) {
-                        this.__redrawArea = new Rectangle;
-                    }
-                    this.__redrawArea = Rectangle.union(this.__redrawArea, area);
-                }
-                this.__redrawScheduled = true;
-                return this;
-            },
             layoutIfNeeded: function() {
+                var parent = this.parent;
+                if (parent && parent.__layoutScheduled) {
+                    parent.layoutIfNeeded();
+                    return;
+                }
                 if (this.__layoutScheduled) {
                     this.__layoutScheduled = false;
                     this.layoutChildren();
+                    this.emit("layout");
                 }
+                _.invoke(this.__children, "layoutIfNeeded");
                 return this;
             },
             layoutChildren: function() {
                 if (this.layout) {
-                    this.layout.view = this;
+                    this.layout.target = this;
                     this.layout.update();
                 }
                 return this;
             },
-            redrawIfNeeded: function(context) {
-                if (this.__redrawScheduled) {
-                    this.__redrawScheduled = false;
-                    var rect = null;
-                    var area = this.__redrawArea;
-                    if (area === null) {
-                        rect = new Rectangle;
-                        rect.size.x = this.measuredSize.x;
-                        rect.size.y = this.measuredSize.y;
-                    } else {
-                        rect = new Rectangle;
-                        rect.size.x = area.size.x || this.measuredSize.x;
-                        rect.size.y = area.size.y || this.measuredSize.y;
-                        rect.origin.x = area.origin.x;
-                        rect.origin.y = area.origin.y;
-                    }
-                    this.redraw(context, area);
-                }
-                return this;
-            },
-            redraw: function(context, area) {
-                this.emit("redraw", context, area);
-                return this;
-            },
             onPropertyChange: function(target, property, newValue, oldValue, e) {
-                if (this.reflowOnPropertyChange(property)) {
-                    this.scheduleReflow();
+                var PropertyAnimationTransaction = boxspring.view.animation.PropertyAnimationTransaction;
+                if (this.reflowOnPropertyChange(property)) this.scheduleReflow();
+                if (this.layoutOnPropertyChange(property)) this.scheduleLayout();
+                if (layoutRoot === null) {
+                    layoutRoot = this.window;
                 }
-                if (this.layoutOnPropertyChange(property)) {
-                    this.scheduleLayout();
+                var status = PropertyAnimationTransaction.status();
+                if (status === PropertyAnimationTransaction.STATUS_READING || status === PropertyAnimationTransaction.STATUS_RUNNING) {
+                    if (this.propertyIsAnimatable(property)) {
+                        var t = newValue;
+                        var f = oldValue;
+                        if (property === "measuredSize.x" && this.__measuredSizeXSet === false || property === "measuredSize.y" && this.__measuredSizeYSet === false || property === "measuredOffset.x" && this.__measuredOffsetXSet === false || property === "measuredOffset.y" && this.__measuredOffsetYSet === false) {
+                            f = t;
+                        }
+                        PropertyAnimationTransaction.animate(this, property, f, t);
+                    }
                 }
-                if (this.redrawOnPropertyChange(property)) {
-                    this.scheduleRedraw();
-                }
+                if (property === "measuredSize.x") this.__measuredSizeXSet = true;
+                if (property === "measuredSize.y") this.__measuredSizeYSet = true;
+                if (property === "measuredOffset.x") this.__measuredOffsetXSet = true;
+                if (property === "measuredOffset.y") this.__measuredOffsetYSet = true;
             },
-            onLayout: function(e) {},
-            onRedraw: function(e) {},
             onAdd: function(view, e) {},
             onRemove: function(view, e) {},
             onAddToParent: function(parent, e) {},
             onRemoveFromParent: function(parent, e) {},
             onAddToWindow: function(window, e) {},
             onRemoveFromWindow: function(window, e) {},
+            onPropertyAnimationStart: function(property, value) {
+                this.__animatedPropertyValues[property] = value;
+            },
+            onPropertyAnimationUpdate: function(property, value) {
+                this.__animatedPropertyValues[property] = value;
+            },
+            onPropertyAnimationEnd: function(property, value) {
+                delete this.__animatedPropertyValues[property];
+            },
             onTouchCancel: function(touches, e) {},
             onTouchStart: function(touches, e) {},
             onTouchMove: function(touches, e) {},
             onTouchEnd: function(touches, e) {},
-            __animations: null,
-            __redrawArea: null,
-            __redrawScheduled: false,
+            __animatedPropertyValues: null,
             __layoutScheduled: false,
+            __measuredSizeXSet: false,
+            __measuredSizeYSet: false,
+            __measuredOffsetXSet: false,
+            __measuredOffsetYSet: false,
             __setParent: function(value) {
                 var parent = this.__parent;
                 if (parent && value === null) {
                     this.__parent = value;
-                    return this.emit("removefromparent", parent);
+                    this.emit("propertychange", "parent", value);
+                    this.emit("removefromparent", parent);
+                    return this;
                 }
                 if (parent === null && value) {
                     this.__parent = value;
-                    return this.emit("addtoparent", parent);
+                    this.emit("propertychange", "parent", value);
+                    this.emit("addtoparent", parent);
+                    return this;
                 }
                 return this;
             },
@@ -4044,23 +4255,37 @@
                 var window = this.__window;
                 if (window && value === null) {
                     this.__window = value;
-                    return this.emit("removefromwindow", window);
+                    this.emit("propertychange", "window", value);
+                    this.emit("removefromwindow", value);
+                    return this;
                 }
                 if (window === null && value) {
                     this.__window = value;
-                    return this.emit("addtowindow", window);
+                    this.emit("propertychange", "window", value);
+                    this.emit("addtowindow", window);
+                    return this;
                 }
-                invoke(this.__children, "__setWindow", value);
+                _.invoke(this.__children, "__setWindow", value);
                 return this;
             }
         });
-        var invoke = _.invoke;
+        var scheduleReflowProperties = [ "size.x", "size.y", "minSize.x", "minSize.y", "maxSize.x", "maxSize.y", "visible", "margin.top", "margin.left", "margin.right", "margin.bottom", "position.top", "position.left", "position.right", "position.bottom" ];
+        var scheduleLayoutProperties = [ "measuredSize.x", "measuredSize.y", "borderWidth", "padding.top", "padding.left", "padding.right", "padding.bottom", "layout" ];
+        var animatableProperties = [ "backgroundColor", "borderColor", "shadowColor", "backgroundImage", "backgroundSize.x", "backgroundSize.y", "borderWidth", "borderRadius", "shadowBlur", "shadowOffset.x", "shadowOffset.y", "opacity", "measuredSize.x", "measuredSize.y", "measuredOffset.x", "measuredOffset.y" ];
+        var layoutRoot = null;
     },
-    z: function(require, module, exports, global) {
+    "13": function(require, module, exports, global) {
         "use strict";
-        var Rectangle = boxspring.geom.Rectangle;
+        var beginTransition = boxspring.view.View.beginTransition;
+        var startTransition = boxspring.view.View.startTransition;
         var View = boxspring.override("boxspring.view.View", {
+            constructor: function() {
+                View.parent.constructor.call(this);
+                this.on("redraw", this.bind("onRedraw"));
+                return this;
+            },
             destroy: function() {
+                this.off("redraw", this.bind("onRedraw"));
                 var renderCache = renderCaches[this.UID];
                 if (renderCache) {
                     renderCache.width = 0;
@@ -4077,52 +4302,75 @@
                 return this;
             },
             redrawOnPropertyChange: function(property) {
-                if (property === "backgroundColor" || property === "backgroundImage" || property === "backgroundRepeat" || property === "backgroundClip" || property === "backgroundSize" || property === "backgroundSize.x" || property === "backgroundSize.y" || property === "borderRadius" || property === "borderColor" || property === "borderWidth" || property === "shadowBlur" || property === "shadowColor" || property === "shadowOffset" || property === "shadowOffset.x" || property === "shadowOffset.y") {
-                    return true;
-                }
-                return View.parent.redrawOnPropertyChange.apply(this, arguments);
+                return scheduleRedrawProperties.indexOf(property) !== -1;
             },
             scheduleLayout: function() {
                 updateDisplayWithMask(this, LAYOUT_UPDATE_MASK);
                 return View.parent.scheduleLayout.call(this);
             },
             scheduleRedraw: function(area) {
-                updateDisplayWithMask(this, REDRAW_UPDATE_MASK);
-                return View.parent.scheduleRedraw.apply(this, arguments);
+                if (area) {
+                    if (this.__redrawArea === null) {
+                        this.__redrawArea = new boxspring.geom.Rectangle;
+                    }
+                    this.__redrawArea = boxspring.geom.Rectangle.union(this.__redrawArea, area);
+                }
+                if (this.__redrawScheduled === false) {
+                    this.__redrawScheduled = true;
+                    updateDisplayWithMask(this, REDRAW_UPDATE_MASK);
+                }
+                return this;
+            },
+            redrawIfNeeded: function(context) {
+                if (this.__redrawScheduled) {
+                    this.__redrawScheduled = false;
+                    var rect = null;
+                    var area = this.__redrawArea;
+                    if (area === null) {
+                        rect = new boxspring.geom.Rectangle;
+                        rect.size.x = this.measuredSize.x;
+                        rect.size.y = this.measuredSize.y;
+                    } else {
+                        rect = new boxspring.geom.Rectangle;
+                        rect.size.x = area.size.x || this.measuredSize.x;
+                        rect.size.y = area.size.y || this.measuredSize.y;
+                        rect.origin.x = area.origin.x;
+                        rect.origin.y = area.origin.y;
+                    }
+                    this.redraw(context, area);
+                    this.emit("redraw", context, area);
+                }
+                return this;
             },
             redraw: function(context, area) {
                 this.__redrawBackground(context, area);
                 this.__redrawBorder(context, area);
                 this.__redrawShadow(context, area);
-                View.parent.redraw.apply(this, arguments);
                 return this;
             },
             onPropertyChange: function(target, property, newValue, oldValue, e) {
-                if (property === "measuredSize" || property === "measuredSize.x" || property === "measuredSize.y") {
-                    updateDisplayWithMask(this, MEASURED_SIZE_UPDATE_MASK);
-                }
-                if (property === "measuredOffset" || property === "measuredOffset.x" || property === "measuredOffset.y") {
-                    updateDisplayWithMask(this, MEASURED_OFFSET_UPDATE_MASK);
-                }
                 if (property === "shadowBlur" || property === "shadowColor" || property === "shadowOffset" || property === "shadowOffset.x" || property === "shadowOffset.y") {
-                    updateDisplayWithMask(this, SHADOW_UPDATE_MASK);
+                    updateDisplayWithMask(this, REDRAW_SHADOW_UPDATE_MASK);
                 }
-                if (property === "opacity") {
-                    updateDisplayWithMask(this, OPACITY_UPADTE_MASK);
+                if (property === "measuredSize" || property === "measuredSize.x" || property === "measuredSize.y" || property === "measuredOffset" || property === "measuredOffset.x" || property === "measuredOffset.y" || property === "opacity" || property === "transform") {
+                    updateDisplayWithMask(this, RENDER_UPDATE_MASK);
                 }
-                if (property === "transform") {
-                    updateDisplayWithMask(this, TRANSFORM_UPDATE_MASK);
+                if (this.redrawOnPropertyChange(property)) {
+                    this.scheduleRedraw();
                 }
-                View.parent.onPropertyChange.apply(this, arguments);
+                View.parent.onPropertyChange.call(this, target, property, newValue, oldValue, e);
             },
+            onRedraw: function(e) {},
+            __redrawArea: null,
+            __redrawScheduled: false,
             __redrawBackground: function(context, area) {
                 var sizeX = this.measuredSize.x;
                 var sizeY = this.measuredSize.y;
-                var borderRadius = this.borderRadius;
-                var backgroundClip = this.backgroundClip;
-                var backgroundColor = this.backgroundColor;
-                var backgroundImage = this.backgroundImage;
-                var backgroundRepeat = this.backgroundRepeat;
+                var borderRadius = this.animatedPropertyValue("borderRadius");
+                var backgroundClip = this.animatedPropertyValue("backgroundClip");
+                var backgroundColor = this.animatedPropertyValue("backgroundColor");
+                var backgroundImage = this.animatedPropertyValue("backgroundImage");
+                var backgroundRepeat = this.animatedPropertyValue("backgroundRepeat");
                 if (backgroundColor || backgroundImage) {
                     var backgroundSizeX = sizeX;
                     var backgroundSizeY = sizeY;
@@ -4152,11 +4400,11 @@
                 return this;
             },
             __redrawBorder: function(context, area) {
-                var sizeX = this.measuredSize.x;
-                var sizeY = this.measuredSize.y;
-                var borderWidth = this.borderWidth;
-                var borderColor = this.borderColor;
-                var borderRadius = this.borderRadius;
+                var sizeX = this.animatedPropertyValue("measuredSize.x");
+                var sizeY = this.animatedPropertyValue("measuredSize.y");
+                var borderWidth = this.animatedPropertyValue("borderWidth");
+                var borderColor = this.animatedPropertyValue("borderColor");
+                var borderRadius = this.animatedPropertyValue("borderRadius");
                 if (borderWidth && borderColor) {
                     var strokeSizeX = sizeX - borderWidth;
                     var strokeSizeY = sizeY - borderWidth;
@@ -4176,9 +4424,7 @@
                 }
                 return this;
             },
-            __redrawShadow: function(context, area) {
-                console.log("TODO REDRAW SHADOW");
-            },
+            __redrawShadow: function(context, area) {},
             __createRectPath: function(context, originX, originY, sizeX, sizeY, radius) {
                 context.beginPath();
                 if (radius) {
@@ -4196,16 +4442,20 @@
                 }
                 context.closePath();
                 return this;
+            },
+            onPropertyAnimationUpdate: function(property, value) {
+                View.parent.onPropertyAnimationUpdate.call(this, property, value);
+                if (this.redrawOnPropertyChange(property)) {
+                    this.scheduleRedraw();
+                }
+                updateDisplayWithMask(this, RENDER_UPDATE_MASK);
             }
         });
-        var RenderLoop = boxspring.render.RenderLoop;
-        var MEASURED_SIZE_UPDATE_MASK = 1;
-        var MEASURED_OFFSET_UPDATE_MASK = 2;
-        var OPACITY_UPADTE_MASK = 4;
-        var TRANSFORM_UPDATE_MASK = 8;
-        var SHADOW_UPDATE_MASK = 16;
-        var LAYOUT_UPDATE_MASK = 32;
-        var REDRAW_UPDATE_MASK = 64;
+        var scheduleRedrawProperties = [ "backgroundColor", "backgroundImage", "backgroundRepeat", "backgroundClip", "backgroundSize", "backgroundSize.x", "backgroundSize.y", "borderRadius", "borderColor", "borderWidth", "shadowBlur", "shadowColor", "shadowOffset", "shadowOffset.x", "shadowOffset.y" ];
+        var RENDER_UPDATE_MASK = 1;
+        var LAYOUT_UPDATE_MASK = 2;
+        var REDRAW_UPDATE_MASK = 4;
+        var REDRAW_SHADOW_UPDATE_MASK = 8;
         var renderCaches = {};
         var shadowCaches = {};
         var updateDisplayViews = {};
@@ -4216,9 +4466,11 @@
             }
             updateDisplayViews[view.UID] = view;
             updateDisplayMasks[view.UID] |= mask;
-            RenderLoop.run(updateDisplay, 500);
+            boxspring.render.RenderLoop.run(updateDisplay, boxspring.render.RenderLoop.RENDER_PRIORITY);
             return this;
         };
+        var lastCalledTime;
+        var fps;
         var updateDisplay = function() {
             var root = null;
             for (var key in updateDisplayViews) {
@@ -4237,26 +4489,40 @@
             composite(root, screenContext);
             updateDisplayViews = {};
             updateDisplayMasks = {};
+            if (!lastCalledTime) {
+                lastCalledTime = (new Date).getTime();
+                fps = 0;
+                return;
+            }
+            var delta = ((new Date).getTime() - lastCalledTime) / 1e3;
+            lastCalledTime = (new Date).getTime();
+            fps = 1 / delta;
+            screenContext.fillText(fps.toFixed(1) + "fps", 10, 10);
         };
         var composite = function(view, screen) {
             var mask = updateDisplayMasks[view.UID];
             if (mask & LAYOUT_UPDATE_MASK) {
                 view.layoutIfNeeded();
             }
-            var sizeX = view.measuredSize.x;
-            var sizeY = view.measuredSize.y;
-            var offsetX = view.measuredOffset.x;
-            var offsetY = view.measuredOffset.y;
+            var sizeX = view.animatedPropertyValue("measuredSize.x");
+            var sizeY = view.animatedPropertyValue("measuredSize.y");
+            var offsetX = view.animatedPropertyValue("measuredOffset.x");
+            var offsetY = view.animatedPropertyValue("measuredOffset.y");
             var cache = renderCaches[view.UID];
             if (cache == null) {
                 cache = renderCaches[view.UID] = document.createElement("canvas");
-                cache.width = sizeX;
-                cache.height = sizeY;
+                cache.width = Math.floor(view.measuredSize.x);
+                cache.height = Math.floor(view.measuredSize.y);
+            } else if (cache.width !== Math.floor(view.measuredSize.x) || cache.height !== Math.floor(view.measuredSize.y)) {
+                cache.width = view.measuredSize.x;
+                cache.height = view.measuredSize.y;
+                mask |= REDRAW_UPDATE_MASK;
+                view.scheduleRedraw();
             }
             if (mask & REDRAW_UPDATE_MASK) {
                 var area = view.__redrawArea;
                 if (area === null) {
-                    area = new Rectangle;
+                    area = new boxspring.geom.Rectangle;
                     area.size.x = view.measuredSize.x;
                     area.size.y = view.measuredSize.y;
                 }
@@ -4266,8 +4532,11 @@
                 view.redrawIfNeeded(context);
                 context.restore();
             }
-            if (sizeX && sizeY) screen.drawImage(cache, 0, 0, cache.width, cache.height, offsetX, offsetY, sizeX, sizeY);
             screen.save();
+            screen.globalAlpha = screen.globalAlpha * view.animatedPropertyValue("opacity");
+            if (sizeX > 0 && sizeY > 0 && cache.width > 0 && cache.height > 0) {
+                screen.drawImage(cache, 0, 0, cache.width, cache.height, offsetX, offsetY, sizeX, sizeY);
+            }
             screen.translate(offsetX, offsetY);
             var children = view.__children;
             for (var i = 0; i < children.length; i++) {
@@ -4283,12 +4552,30 @@
             screenCanvas.height = window.innerHeight;
             document.body.appendChild(screenCanvas);
             screenContext = screenCanvas.getContext("2d");
+            window.addEventListener("resize", function() {
+                screenCanvas.width = window.innerWidth;
+                screenCanvas.height = window.innerHeight;
+            });
         });
     },
-    "10": function(require, module, exports, global) {
+    "14": function(require, module, exports, global) {
         "use strict";
         var Window = boxspring.define("boxspring.view.Window", {
             inherits: boxspring.view.View,
+            statics: {
+                instance: function() {
+                    if (instance == null) {
+                        instance = new boxspring.view.Window;
+                    }
+                    return instance;
+                }
+            },
+            constructor: function() {
+                Window.parent.constructor.call(this);
+                this.measuredOffset.x = 0;
+                this.measuredOffset.y = 0;
+                return this;
+            },
             onAdd: function(view, e) {
                 Window.parent.onAdd.call(this, view);
                 view.__setWindow(this);
@@ -4298,9 +4585,19 @@
                 view.__setWindow(null);
             }
         });
+        var instance = null;
     },
-    "11": function(require, module, exports, global) {
+    "15": function(require, module, exports, global) {
         "use strict";
-        var Window = boxspring.override("boxspring.view.Window", {});
+        var Window = boxspring.override("boxspring.view.Window", {
+            constructor: function() {
+                Window.parent.constructor.call(this);
+                window.addEventListener("resize", this.bind("__onWindowResize"));
+                return this;
+            },
+            __onWindowResize: function() {
+                this.scheduleLayout();
+            }
+        });
     }
 });

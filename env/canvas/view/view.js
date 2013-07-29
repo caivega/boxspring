@@ -1,13 +1,19 @@
 "use strict"
 
-var Rectangle = boxspring.geom.Rectangle
+var beginTransition = boxspring.view.View.beginTransition
+var startTransition = boxspring.view.View.startTransition
 
 /**
  * Handle screen layout and interaction with the user.
+ * @env canvas
  * @class boxspring.view.View
  * @since 0.9
  */
 var View = boxspring.override('boxspring.view.View', {
+
+	//--------------------------------------------------------------------------
+	// Statics
+	//--------------------------------------------------------------------------
 
 	//--------------------------------------------------------------------------
 	// Methods
@@ -15,10 +21,23 @@ var View = boxspring.override('boxspring.view.View', {
 
 	/**
 	 * @overridden
+	 * @method constructor
+	 * @since 0.9
+	 */
+	constructor: function() {
+		View.parent.constructor.call(this)
+		this.on('redraw', this.bind('onRedraw'))
+		return this
+	},
+
+	/**
+	 * @overridden
 	 * @method destroy
 	 * @since 0.9
 	 */
 	destroy: function() {
+
+		this.off('redraw', this.bind('onRedraw'))
 
 		var renderCache = renderCaches[this.UID]
 		if (renderCache) {
@@ -39,32 +58,13 @@ var View = boxspring.override('boxspring.view.View', {
 		return this
 	},
 
-	/**
-	 * @overridden
-	 * @method redrawOnPropertyChange
-	 * @since 0.9
-	 */
+   /**
+     * Indicates whether a redraw is needed when the specified propery changes.
+     * @method redrawOnPropertyChange
+     * @since 0.9
+     */
 	redrawOnPropertyChange: function(property) {
-
-		if (property === 'backgroundColor' ||
-			property === 'backgroundImage' ||
-			property === 'backgroundRepeat' ||
-			property === 'backgroundClip' ||
-			property === 'backgroundSize' ||
-			property === 'backgroundSize.x' ||
-			property === 'backgroundSize.y' ||
-			property === 'borderRadius' ||
-			property === 'borderColor' ||
-			property === 'borderWidth' ||
-			property === 'shadowBlur' ||
-			property === 'shadowColor' ||
-			property === 'shadowOffset' ||
-			property === 'shadowOffset.x' ||
-			property === 'shadowOffset.y') {
-			return true
-		}
-
-		return View.parent.redrawOnPropertyChange.apply(this, arguments)
+		return scheduleRedrawProperties.indexOf(property) !== -1
 	},
 
 	/**
@@ -77,26 +77,71 @@ var View = boxspring.override('boxspring.view.View', {
 		return View.parent.scheduleLayout.call(this)
 	},
 
+    /**
+     * Schedule this view to be redrawn on the next cycle.
+     * @method scheduleRedraw
+     * @since 0.9
+     */
+    scheduleRedraw: function(area) {
+
+        if (area) {
+
+            if (this.__redrawArea === null) {
+                this.__redrawArea = new boxspring.geom.Rectangle()
+            }
+
+            this.__redrawArea = boxspring.geom.Rectangle.union(this.__redrawArea, area)
+        }
+
+        if (this.__redrawScheduled === false) {
+        	this.__redrawScheduled = true
+        	updateDisplayWithMask(this, REDRAW_UPDATE_MASK)
+        }
+
+        return this
+    },
+
 	/**
-	 * @overridden
-	 * @method scheduleRedraw
-	 * @since 0.9
-	 */
-	scheduleRedraw: function(area) {
-		updateDisplayWithMask(this, REDRAW_UPDATE_MASK)
-		return View.parent.scheduleRedraw.apply(this, arguments)
-	},
+     * Draw the view into its context.
+     * @method redraw
+     * @since 0.9
+     */
+    redrawIfNeeded: function(context) {
+
+        if (this.__redrawScheduled) {
+            this.__redrawScheduled = false
+
+            var rect = null
+            var area = this.__redrawArea
+            if (area === null) {
+                rect = new boxspring.geom.Rectangle()
+                rect.size.x = this.measuredSize.x
+                rect.size.y = this.measuredSize.y
+            } else {
+                rect = new boxspring.geom.Rectangle()
+                rect.size.x = area.size.x || this.measuredSize.x
+                rect.size.y = area.size.y || this.measuredSize.y
+                rect.origin.x = area.origin.x
+                rect.origin.y = area.origin.y
+            }
+
+            this.redraw(context, area)
+
+            this.emit('redraw', context, area)
+        }
+
+        return this
+    },
 
    /**
-	 * @overridden
-	 * @method redraw
-	 * @since 0.9
-	 */
+     * Draw the view into its context.
+     * @method redraw
+     * @since 0.9
+     */
 	redraw: function(context, area) {
 		this.__redrawBackground(context, area)
 		this.__redrawBorder(context, area)
 		this.__redrawShadow(context, area)
-		View.parent.redraw.apply(this, arguments)
 		return this
 	},
 
@@ -111,40 +156,60 @@ var View = boxspring.override('boxspring.view.View', {
 	 */
 	onPropertyChange: function(target, property, newValue, oldValue, e) {
 
-		if (property === 'measuredSize' ||
-			property === 'measuredSize.x' ||
-			property === 'measuredSize.y') {
-			updateDisplayWithMask(this, MEASURED_SIZE_UPDATE_MASK)
-		}
-
-		if (property === 'measuredOffset' ||
-			property === 'measuredOffset.x' ||
-			property === 'measuredOffset.y') {
-			updateDisplayWithMask(this, MEASURED_OFFSET_UPDATE_MASK)
-		}
-
 		if (property === 'shadowBlur' ||
 			property === 'shadowColor' ||
 			property === 'shadowOffset' ||
 			property === 'shadowOffset.x' ||
 			property === 'shadowOffset.y') {
-			updateDisplayWithMask(this, SHADOW_UPDATE_MASK)
+			updateDisplayWithMask(this, REDRAW_SHADOW_UPDATE_MASK)
 		}
 
-		if (property === 'opacity') {
-			updateDisplayWithMask(this, OPACITY_UPADTE_MASK)
+		if (property === 'measuredSize' ||
+			property === 'measuredSize.x' ||
+			property === 'measuredSize.y' ||
+			property === 'measuredOffset' ||
+			property === 'measuredOffset.x' ||
+			property === 'measuredOffset.y' ||
+			property === 'opacity' ||
+			property === 'transform') {
+			updateDisplayWithMask(this, RENDER_UPDATE_MASK)
 		}
 
-		if (property === 'transform') {
-			updateDisplayWithMask(this, TRANSFORM_UPDATE_MASK)
+		if (this.redrawOnPropertyChange(property)) {
+			this.scheduleRedraw()
 		}
 
-		View.parent.onPropertyChange.apply(this, arguments)
+		View.parent.onPropertyChange.call(this, target, property, newValue, oldValue, e)
 	},
+
+	//--------------------------------------------------------------------------
+	// Event Handlers
+	//--------------------------------------------------------------------------
+
+    /**
+     * Called once a view redraw occured
+     * @method onLayout
+     * @since 0.9
+     */
+    onRedraw: function(e) {
+
+    },
 
 	//--------------------------------------------------------------------------
 	// Private API
 	//--------------------------------------------------------------------------
+
+    /**
+     * The area to redraw on the view.
+     * @private
+     */
+    __redrawArea: null,
+
+    /**
+     * Whether the view needs to be redrawn.
+     * @private
+     */
+    __redrawScheduled: false,
 
 	/**
 	 * Redraw the view background.
@@ -156,11 +221,11 @@ var View = boxspring.override('boxspring.view.View', {
 		var sizeX = this.measuredSize.x
 		var sizeY = this.measuredSize.y
 
-		var borderRadius = this.borderRadius
-		var backgroundClip = this.backgroundClip
-		var backgroundColor = this.backgroundColor
-		var backgroundImage = this.backgroundImage
-		var backgroundRepeat = this.backgroundRepeat
+		var borderRadius = this.animatedPropertyValue('borderRadius')
+		var backgroundClip = this.animatedPropertyValue('backgroundClip')
+		var backgroundColor = this.animatedPropertyValue('backgroundColor')
+		var backgroundImage = this.animatedPropertyValue('backgroundImage')
+		var backgroundRepeat = this.animatedPropertyValue('backgroundRepeat')
 
 		if (backgroundColor || backgroundImage) {
 
@@ -207,12 +272,12 @@ var View = boxspring.override('boxspring.view.View', {
 	 */
 	__redrawBorder: function(context, area) {
 
-		var sizeX = this.measuredSize.x
-		var sizeY = this.measuredSize.y
+		var sizeX = this.animatedPropertyValue('measuredSize.x')
+		var sizeY = this.animatedPropertyValue('measuredSize.y')
 
-  		var borderWidth = this.borderWidth
-        var borderColor = this.borderColor
-        var borderRadius = this.borderRadius
+  		var borderWidth = this.animatedPropertyValue('borderWidth')
+        var borderColor = this.animatedPropertyValue('borderColor')
+        var borderRadius = this.animatedPropertyValue('borderRadius')
 
 		if (borderWidth && borderColor) {
 
@@ -246,7 +311,7 @@ var View = boxspring.override('boxspring.view.View', {
 	 * @private
 	 */
 	__redrawShadow: function(context, area) {
-		console.log('TODO REDRAW SHADOW')
+		//console.log('TODO REDRAW SHADOW')
 	},
 
 	/**
@@ -275,22 +340,49 @@ var View = boxspring.override('boxspring.view.View', {
 		context.closePath()
 
 		return this
-	}
+	},
+
+	onPropertyAnimationUpdate: function(property, value) {
+
+       View.parent.onPropertyAnimationUpdate.call(this, property, value)
+
+       if (this.redrawOnPropertyChange(property)) {
+       		this.scheduleRedraw()
+       }
+
+       updateDisplayWithMask(this, RENDER_UPDATE_MASK)
+    },
 })
 
-var RenderLoop = boxspring.render.RenderLoop
+/**
+ * The list of properties that triggers a redraw.
+ */
+var scheduleRedrawProperties = [
+	'backgroundColor',
+	'backgroundImage',
+	'backgroundRepeat',
+	'backgroundClip',
+	'backgroundSize',
+	'backgroundSize.x',
+	'backgroundSize.y',
+	'borderRadius',
+	'borderColor',
+	'borderWidth',
+	'shadowBlur',
+	'shadowColor',
+	'shadowOffset',
+	'shadowOffset.x',
+	'shadowOffset.y'
+]
 
 /**
  * Display update masks.
  * @private
  */
-var MEASURED_SIZE_UPDATE_MASK = 1
-var MEASURED_OFFSET_UPDATE_MASK = 2
-var OPACITY_UPADTE_MASK = 4
-var TRANSFORM_UPDATE_MASK = 8
-var SHADOW_UPDATE_MASK = 16
-var LAYOUT_UPDATE_MASK = 32
-var REDRAW_UPDATE_MASK = 64
+var RENDER_UPDATE_MASK = 1
+var LAYOUT_UPDATE_MASK = 2
+var REDRAW_UPDATE_MASK = 4
+var REDRAW_SHADOW_UPDATE_MASK = 8
 
 /**
  * Rendering caches.
@@ -316,10 +408,13 @@ var updateDisplayWithMask = function(view, mask) {
 	updateDisplayViews[view.UID] = view
 	updateDisplayMasks[view.UID] |= mask
 
-	RenderLoop.run(updateDisplay, 500)
+	boxspring.render.RenderLoop.run(updateDisplay, boxspring.render.RenderLoop.RENDER_PRIORITY)
 
 	return this
 }
+
+var lastCalledTime;
+var fps;
 
 /**
  * Recompose the entire view hierarchy.
@@ -350,11 +445,30 @@ var updateDisplay = function() {
     	screenCanvas.height
     )
 
+	// screenContext.save()
+	// screenContext.fillStyle = 'rgba(255, 255, 255, 0.0005)'
+	// screenContext.fillRect(0, 0,
+ //     	screenCanvas.width,
+ //     	screenCanvas.height
+ //    )
+ //    screenContext.restore()
+
     composite(root, screenContext)
 
     updateDisplayViews = {}
     updateDisplayMasks = {}
-//    updateDisplayRequest = null
+
+	  if(!lastCalledTime) {
+	     lastCalledTime = new Date().getTime();
+	     fps = 0;
+	     return;
+	  }
+	  var delta = (new Date().getTime() - lastCalledTime)/1000;
+	  lastCalledTime = new Date().getTime();
+	  fps = 1/delta;
+
+	  screenContext.fillText(fps.toFixed(1) + "fps", 10, 10)
+
 }
 
 /**
@@ -367,23 +481,28 @@ var composite = function(view, screen) {
 		view.layoutIfNeeded()
 	}
 
-	var sizeX = view.measuredSize.x
-	var sizeY = view.measuredSize.y
-	var offsetX = view.measuredOffset.x
-	var offsetY = view.measuredOffset.y
+	var sizeX = view.animatedPropertyValue('measuredSize.x')
+	var sizeY = view.animatedPropertyValue('measuredSize.y')
+	var offsetX = view.animatedPropertyValue('measuredOffset.x')
+	var offsetY = view.animatedPropertyValue('measuredOffset.y')
 
 	var cache = renderCaches[view.UID]
 	if (cache == null) {
 		cache = renderCaches[view.UID] = document.createElement('canvas')
-		cache.width = sizeX
-		cache.height = sizeY
+		cache.width  = Math.floor(view.measuredSize.x)
+		cache.height = Math.floor(view.measuredSize.y)
+	} else if (cache.width  !== Math.floor(view.measuredSize.x) || cache.height !== Math.floor(view.measuredSize.y)) {
+		cache.width  = view.measuredSize.x
+		cache.height = view.measuredSize.y
+		mask |= REDRAW_UPDATE_MASK
+		view.scheduleRedraw()
 	}
 
 	if (mask & REDRAW_UPDATE_MASK) {
 
         var area = view.__redrawArea
         if (area === null) {
-            area = new Rectangle()
+            area = new boxspring.geom.Rectangle()
             area.size.x = view.measuredSize.x
             area.size.y = view.measuredSize.y
         }
@@ -403,17 +522,23 @@ var composite = function(view, screen) {
 		context.restore()
 	}
 
-	if (sizeX && sizeY) screen.drawImage(
-        cache, 0, 0,
-        cache.width,
-        cache.height,
-        offsetX,
-        offsetY,
-        sizeX,
-        sizeY
-    )
-
 	screen.save()
+	screen.globalAlpha = screen.globalAlpha * view.animatedPropertyValue('opacity');
+
+	if (sizeX > 0 && sizeY  > 0 && cache.width > 0 && cache.height > 0) {
+
+		screen.drawImage(
+	        cache, 0, 0,
+	        cache.width,
+	        cache.height,
+	        offsetX,
+	        offsetY,
+	        sizeX,
+	        sizeY
+	    )
+
+	}
+
 	screen.translate(offsetX, offsetY)
 
     var children = view.__children
@@ -434,6 +559,8 @@ var screenCanvas = null
  */
 var screenContext = null
 
+
+
 /**
  * Create the main canvas.
  */
@@ -443,4 +570,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	screenCanvas.height = window.innerHeight
 	document.body.appendChild(screenCanvas)
 	screenContext = screenCanvas.getContext('2d')
+
+	window.addEventListener('resize', function() {
+	    screenCanvas.width = window.innerWidth
+	    screenCanvas.height = window.innerHeight
+	})
+
 });
