@@ -1,8 +1,5 @@
 "use strict"
 
-var beginTransition = boxspring.view.View.beginTransition
-var startTransition = boxspring.view.View.startTransition
-
 /**
  * Handle screen layout and interaction with the user.
  * @env canvas
@@ -12,23 +9,8 @@ var startTransition = boxspring.view.View.startTransition
 var View = boxspring.override('boxspring.view.View', {
 
 	//--------------------------------------------------------------------------
-	// Statics
-	//--------------------------------------------------------------------------
-
-	//--------------------------------------------------------------------------
 	// Methods
 	//--------------------------------------------------------------------------
-
-	/**
-	 * @overridden
-	 * @method constructor
-	 * @since 0.9
-	 */
-	constructor: function() {
-		View.parent.constructor.call(this)
-		this.on('redraw', this.bind('onRedraw'))
-		return this
-	},
 
 	/**
 	 * @overridden
@@ -36,8 +18,6 @@ var View = boxspring.override('boxspring.view.View', {
 	 * @since 0.9
 	 */
 	destroy: function() {
-
-		this.off('redraw', this.bind('onRedraw'))
 
 		var renderCache = renderCaches[this.UID]
 		if (renderCache) {
@@ -137,6 +117,16 @@ var View = boxspring.override('boxspring.view.View', {
 
 		View.parent.onPropertyChange.call(this, target, property, newValue, oldValue, e)
 	},
+
+	/**
+	 * @overridden
+	 * @method onPropertyAnimationUpdate
+	 * @since 0.9
+	 */
+	onPropertyAnimationUpdate: function(property, value) {
+       View.parent.onPropertyAnimationUpdate.call(this, property, value)
+       updateDisplayWithMask(this, RENDER_UPDATE_MASK)
+    },
 
 	//--------------------------------------------------------------------------
 	// Private API
@@ -271,18 +261,8 @@ var View = boxspring.override('boxspring.view.View', {
 		context.closePath()
 
 		return this
-	},
+	}
 
-	onPropertyAnimationUpdate: function(property, value) {
-
-       View.parent.onPropertyAnimationUpdate.call(this, property, value)
-
-       if (this.redrawOnPropertyChange(property)) {
-       		this.scheduleRedraw()
-       }
-
-       updateDisplayWithMask(this, RENDER_UPDATE_MASK)
-    },
 })
 
 /**

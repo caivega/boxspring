@@ -4262,6 +4262,7 @@
             },
             onPropertyAnimationUpdate: function(property, value) {
                 this.__animatedPropertyValues[property] = value;
+                if (this.redrawOnPropertyChange(property)) this.scheduleRedraw();
             },
             onPropertyAnimationEnd: function(property, value) {
                 delete this.__animatedPropertyValues[property];
@@ -4319,16 +4320,8 @@
     },
     "13": function(require, module, exports, global) {
         "use strict";
-        var beginTransition = boxspring.view.View.beginTransition;
-        var startTransition = boxspring.view.View.startTransition;
         var View = boxspring.override("boxspring.view.View", {
-            constructor: function() {
-                View.parent.constructor.call(this);
-                this.on("redraw", this.bind("onRedraw"));
-                return this;
-            },
             destroy: function() {
-                this.off("redraw", this.bind("onRedraw"));
                 var renderCache = renderCaches[this.UID];
                 if (renderCache) {
                     renderCache.width = 0;
@@ -4374,6 +4367,10 @@
                     this.scheduleRedraw();
                 }
                 View.parent.onPropertyChange.call(this, target, property, newValue, oldValue, e);
+            },
+            onPropertyAnimationUpdate: function(property, value) {
+                View.parent.onPropertyAnimationUpdate.call(this, property, value);
+                updateDisplayWithMask(this, RENDER_UPDATE_MASK);
             },
             __redrawBackground: function(context, area) {
                 var sizeX = this.measuredSize.x;
@@ -4454,13 +4451,6 @@
                 }
                 context.closePath();
                 return this;
-            },
-            onPropertyAnimationUpdate: function(property, value) {
-                View.parent.onPropertyAnimationUpdate.call(this, property, value);
-                if (this.redrawOnPropertyChange(property)) {
-                    this.scheduleRedraw();
-                }
-                updateDisplayWithMask(this, RENDER_UPDATE_MASK);
             }
         });
         var scheduleRedrawProperties = [ "backgroundColor", "backgroundImage", "backgroundRepeat", "backgroundClip", "backgroundSize", "backgroundSize.x", "backgroundSize.y", "borderRadius", "borderColor", "borderWidth", "shadowBlur", "shadowColor", "shadowOffset", "shadowOffset.x", "shadowOffset.y" ];
