@@ -3974,6 +3974,8 @@
                 this.on("propertyanimationstart", this.bind("onPropertyAnimationStart"));
                 this.on("propertyanimationupdate", this.bind("onPropertyAnimationUpdate"));
                 this.on("propertyanimationend", this.bind("onPropertyAnimationEnd"));
+                this.on("layout", this.bind("onLayout"));
+                this.on("redraw", this.bind("onRedraw"));
                 this.on("add", this.bind("onAdd"));
                 this.on("remove", this.bind("onRemove"));
                 this.on("addtoparent", this.bind("onAddToParent"));
@@ -4151,11 +4153,24 @@
             propertyIsAnimatable: function(property) {
                 return animatableProperties.indexOf(property) !== -1;
             },
+            redrawOnPropertyChange: function(property) {
+                return scheduleRedrawProperties.indexOf(property) !== -1;
+            },
             reflowOnPropertyChange: function(property) {
                 return scheduleReflowProperties.indexOf(property) !== -1;
             },
             layoutOnPropertyChange: function(property) {
                 return scheduleLayoutProperties.indexOf(property) !== -1;
+            },
+            scheduleRedraw: function(area) {
+                if (area) {
+                    if (this.__redrawArea === null) {
+                        this.__redrawArea = new boxspring.geom.Rectangle;
+                    }
+                    this.__redrawArea = boxspring.geom.Rectangle.union(this.__redrawArea, area);
+                }
+                this.__redrawScheduled = true;
+                return this;
             },
             scheduleReflow: function() {
                 var parent = this.parent;
@@ -4164,6 +4179,27 @@
             },
             scheduleLayout: function() {
                 this.__layoutScheduled = true;
+                return this;
+            },
+            redrawIfNeeded: function(context) {
+                if (this.__redrawScheduled) {
+                    this.__redrawScheduled = false;
+                    var rect = null;
+                    var area = this.__redrawArea;
+                    if (area === null) {
+                        rect = new boxspring.geom.Rectangle;
+                        rect.size.x = this.measuredSize.x;
+                        rect.size.y = this.measuredSize.y;
+                    } else {
+                        rect = new boxspring.geom.Rectangle;
+                        rect.size.x = area.size.x || this.measuredSize.x;
+                        rect.size.y = area.size.y || this.measuredSize.y;
+                        rect.origin.x = area.origin.x;
+                        rect.origin.y = area.origin.y;
+                    }
+                    this.redraw(context, area);
+                    this.emit("redraw", context, area);
+                }
                 return this;
             },
             layoutIfNeeded: function() {
@@ -4178,6 +4214,9 @@
                     this.emit("layout");
                 }
                 _.invoke(this.__children, "layoutIfNeeded");
+                return this;
+            },
+            redraw: function(context, area) {
                 return this;
             },
             layoutChildren: function() {
@@ -4210,6 +4249,8 @@
                 if (property === "measuredOffset.x") this.__measuredOffsetXSet = true;
                 if (property === "measuredOffset.y") this.__measuredOffsetYSet = true;
             },
+            onRedraw: function(e) {},
+            onLayout: function(e) {},
             onAdd: function(view, e) {},
             onRemove: function(view, e) {},
             onAddToParent: function(parent, e) {},
@@ -4230,6 +4271,8 @@
             onTouchMove: function(touches, e) {},
             onTouchEnd: function(touches, e) {},
             __animatedPropertyValues: null,
+            __redrawArea: null,
+            __redrawScheduled: false,
             __layoutScheduled: false,
             __measuredSizeXSet: false,
             __measuredSizeYSet: false,
@@ -4305,41 +4348,13 @@
                 return scheduleRedrawProperties.indexOf(property) !== -1;
             },
             scheduleLayout: function() {
+                View.parent.scheduleLayout.call(this);
                 updateDisplayWithMask(this, LAYOUT_UPDATE_MASK);
-                return View.parent.scheduleLayout.call(this);
-            },
-            scheduleRedraw: function(area) {
-                if (area) {
-                    if (this.__redrawArea === null) {
-                        this.__redrawArea = new boxspring.geom.Rectangle;
-                    }
-                    this.__redrawArea = boxspring.geom.Rectangle.union(this.__redrawArea, area);
-                }
-                if (this.__redrawScheduled === false) {
-                    this.__redrawScheduled = true;
-                    updateDisplayWithMask(this, REDRAW_UPDATE_MASK);
-                }
                 return this;
             },
-            redrawIfNeeded: function(context) {
-                if (this.__redrawScheduled) {
-                    this.__redrawScheduled = false;
-                    var rect = null;
-                    var area = this.__redrawArea;
-                    if (area === null) {
-                        rect = new boxspring.geom.Rectangle;
-                        rect.size.x = this.measuredSize.x;
-                        rect.size.y = this.measuredSize.y;
-                    } else {
-                        rect = new boxspring.geom.Rectangle;
-                        rect.size.x = area.size.x || this.measuredSize.x;
-                        rect.size.y = area.size.y || this.measuredSize.y;
-                        rect.origin.x = area.origin.x;
-                        rect.origin.y = area.origin.y;
-                    }
-                    this.redraw(context, area);
-                    this.emit("redraw", context, area);
-                }
+            scheduleRedraw: function(area) {
+                View.parent.scheduleRedraw.call(this, area);
+                updateDisplayWithMask(this, REDRAW_UPDATE_MASK);
                 return this;
             },
             redraw: function(context, area) {
@@ -4360,9 +4375,6 @@
                 }
                 View.parent.onPropertyChange.call(this, target, property, newValue, oldValue, e);
             },
-            onRedraw: function(e) {},
-            __redrawArea: null,
-            __redrawScheduled: false,
             __redrawBackground: function(context, area) {
                 var sizeX = this.measuredSize.x;
                 var sizeY = this.measuredSize.y;

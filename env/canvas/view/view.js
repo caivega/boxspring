@@ -59,7 +59,7 @@ var View = boxspring.override('boxspring.view.View', {
 	},
 
    /**
-     * Indicates whether a redraw is needed when the specified propery changes.
+	 * @overridden
      * @method redrawOnPropertyChange
      * @since 0.9
      */
@@ -73,68 +73,24 @@ var View = boxspring.override('boxspring.view.View', {
 	 * @since 0.9
 	 */
 	scheduleLayout: function() {
+		View.parent.scheduleLayout.call(this)
 		updateDisplayWithMask(this, LAYOUT_UPDATE_MASK)
-		return View.parent.scheduleLayout.call(this)
+		return this
 	},
 
     /**
-     * Schedule this view to be redrawn on the next cycle.
+	 * @overridden
      * @method scheduleRedraw
      * @since 0.9
      */
     scheduleRedraw: function(area) {
-
-        if (area) {
-
-            if (this.__redrawArea === null) {
-                this.__redrawArea = new boxspring.geom.Rectangle()
-            }
-
-            this.__redrawArea = boxspring.geom.Rectangle.union(this.__redrawArea, area)
-        }
-
-        if (this.__redrawScheduled === false) {
-        	this.__redrawScheduled = true
-        	updateDisplayWithMask(this, REDRAW_UPDATE_MASK)
-        }
-
-        return this
-    },
-
-	/**
-     * Draw the view into its context.
-     * @method redraw
-     * @since 0.9
-     */
-    redrawIfNeeded: function(context) {
-
-        if (this.__redrawScheduled) {
-            this.__redrawScheduled = false
-
-            var rect = null
-            var area = this.__redrawArea
-            if (area === null) {
-                rect = new boxspring.geom.Rectangle()
-                rect.size.x = this.measuredSize.x
-                rect.size.y = this.measuredSize.y
-            } else {
-                rect = new boxspring.geom.Rectangle()
-                rect.size.x = area.size.x || this.measuredSize.x
-                rect.size.y = area.size.y || this.measuredSize.y
-                rect.origin.x = area.origin.x
-                rect.origin.y = area.origin.y
-            }
-
-            this.redraw(context, area)
-
-            this.emit('redraw', context, area)
-        }
-
+    	View.parent.scheduleRedraw.call(this, area)
+       	updateDisplayWithMask(this, REDRAW_UPDATE_MASK)
         return this
     },
 
    /**
-     * Draw the view into its context.
+	 * @overridden
      * @method redraw
      * @since 0.9
      */
@@ -183,33 +139,8 @@ var View = boxspring.override('boxspring.view.View', {
 	},
 
 	//--------------------------------------------------------------------------
-	// Event Handlers
-	//--------------------------------------------------------------------------
-
-    /**
-     * Called once a view redraw occured
-     * @method onLayout
-     * @since 0.9
-     */
-    onRedraw: function(e) {
-
-    },
-
-	//--------------------------------------------------------------------------
 	// Private API
 	//--------------------------------------------------------------------------
-
-    /**
-     * The area to redraw on the view.
-     * @private
-     */
-    __redrawArea: null,
-
-    /**
-     * Whether the view needs to be redrawn.
-     * @private
-     */
-    __redrawScheduled: false,
 
 	/**
 	 * Redraw the view background.
