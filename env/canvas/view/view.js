@@ -1,9 +1,8 @@
 "use strict"
 
 /**
- * Handle screen layout and interaction with the user.
- * @env canvas
  * @class boxspring.view.View
+ * @super boxspring.view.View
  * @since 0.9
  */
 var View = boxspring.override('boxspring.view.View', {
@@ -13,7 +12,6 @@ var View = boxspring.override('boxspring.view.View', {
 	//--------------------------------------------------------------------------
 
 	/**
-	 * @overridden
 	 * @method destroy
 	 * @since 0.9
 	 */
@@ -39,7 +37,6 @@ var View = boxspring.override('boxspring.view.View', {
 	},
 
    /**
-	 * @overridden
      * @method redrawOnPropertyChange
      * @since 0.9
      */
@@ -48,7 +45,6 @@ var View = boxspring.override('boxspring.view.View', {
 	},
 
 	/**
-	 * @overridden
 	 * @method scheduleLayout
 	 * @since 0.9
 	 */
@@ -60,7 +56,6 @@ var View = boxspring.override('boxspring.view.View', {
 	},
 
     /**
-	 * @overridden
      * @method scheduleRedraw
      * @since 0.9
      */
@@ -72,7 +67,6 @@ var View = boxspring.override('boxspring.view.View', {
     },
 
    /**
-	 * @overridden
      * @method redraw
      * @since 0.9
      */
@@ -88,7 +82,6 @@ var View = boxspring.override('boxspring.view.View', {
 	//--------------------------------------------------------------------------
 
 	/**
-	 * @overridden
 	 * @method onPropertyChange
 	 * @since 0.9
 	 */
@@ -121,7 +114,6 @@ var View = boxspring.override('boxspring.view.View', {
 	},
 
 	/**
-	 * @overridden
 	 * @method onPropertyAnimationUpdate
 	 * @since 0.9
 	 */
@@ -135,9 +127,10 @@ var View = boxspring.override('boxspring.view.View', {
 	//--------------------------------------------------------------------------
 
 	/**
-	 * Redraw the view background.
-	 * @method __redrawBorder
-	 * @private
+	 * @method __redrawBackground
+	 * @brief Redraw the view background.
+	 * @scope private
+	 * @since 0.9
 	 */
 	__redrawBackground: function(context, area) {
 
@@ -189,9 +182,10 @@ var View = boxspring.override('boxspring.view.View', {
 	},
 
 	/**
-	 * Redraw the view border.
 	 * @method __redrawBorder
-	 * @private
+	 * @brief Redraw the view border.
+	 * @scope private
+	 * @since 0.9
 	 */
 	__redrawBorder: function(context, area) {
 
@@ -229,9 +223,10 @@ var View = boxspring.override('boxspring.view.View', {
 	},
 
 	/**
-	 * Redraw the view shadow.
 	 * @method __redrawShadow
-	 * @private
+	 * @brief Redraw the view shadow.
+	 * @scope private
+	 * @since 0.9
 	 */
 	__redrawShadow: function(context, area) {
 		//console.log('TODO REDRAW SHADOW')
@@ -239,7 +234,9 @@ var View = boxspring.override('boxspring.view.View', {
 })
 
 /**
- * The list of properties that triggers a redraw.
+ * @brief The list of properties that triggers a redraw.
+ * @scope hidden
+ * @since 0.9
  */
 var scheduleRedrawProperties = [
 	'backgroundColor',
@@ -260,8 +257,9 @@ var scheduleRedrawProperties = [
 ]
 
 /**
- * Display update masks.
- * @private
+ * @brief Display update masks.
+ * @scope hidden
+ * @since 0.9
  */
 var RENDER_UPDATE_MASK = 1
 var LAYOUT_UPDATE_MASK = 2
@@ -270,24 +268,32 @@ var REDRAW_SHADOW_UPDATE_MASK = 8
 var ANIMATE_UPDATE_MASK = 16
 
 /**
- * Rendering caches.
+ * @brief Rendering caches.
+ * @scope hidden
+ * @since 0.9
  */
 var renderCaches = {}
 var shadowCaches = {}
 
 /**
- * Display update data.
+ * @brief Display update data.
+ * @scope hidden
+ * @since 0.9
  */
 var updateDisplayViews = {}
 var updateDisplayMasks = {}
 
 /**
- * Whether an update display is scheduled.
+ * @brief Whether an update display is scheduled.
+ * @scope hidden
+ * @since 0.9
  */
 var updateDisplayScheduled = false
 
 /**
- * Schedule an update on the next rendering cycle.
+ * @brief Schedule an update on the next rendering cycle.
+ * @scope hidden
+ * @since 0.9
  */
 var updateDisplayWithMask = function(view, mask) {
 
@@ -320,7 +326,9 @@ var lastCalledTime;
 var fps;
 
 /**
- * Recompose the entire view hierarchy.
+ * @brief Recompose the entire view hierarchy.
+ * @scope hidden
+ * @since 0.9
  */
 var updateDisplay = function() {
 
@@ -372,6 +380,8 @@ var updateDisplay = function() {
 
 /**
  * Paint the specified view onto the screen.
+ * @scope hidden
+ * @since 0.9
  */
 var composite = function(view, screen) {
 
@@ -449,8 +459,9 @@ var composite = function(view, screen) {
 }
 
 /**
- * Create a new rectangular path with a specified radius.
- * @private
+ * @brief Create a new rectangular path with a specified radius.
+ * @scope hidden
+ * @since 0.9
  */
 var createRectPath = function(context, originX, originY, sizeX, sizeY, radius) {
 
@@ -476,19 +487,23 @@ var createRectPath = function(context, originX, originY, sizeX, sizeY, radius) {
 }
 
 /**
- * The screen canvas.
+ * @brief The screen canvas.
+ * @scope hidden
+ * @since 0.9
  */
 var screenCanvas = null
 
 /**
- * The screen canvas.
+ * @brief The screen canvas.
+ * @scope hidden
+ * @since 0.9
  */
 var screenContext = null
 
-
-
 /**
- * Create the main canvas.
+ * @brief Create the main canvas.
+ * @scope hidden
+ * @since 0.9
  */
 document.addEventListener("DOMContentLoaded", function(event) {
 	screenCanvas = document.createElement('canvas')
@@ -496,10 +511,8 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	screenCanvas.height = window.innerHeight
 	document.body.appendChild(screenCanvas)
 	screenContext = screenCanvas.getContext('2d')
-
 	window.addEventListener('resize', function() {
 	    screenCanvas.width = window.innerWidth
 	    screenCanvas.height = window.innerHeight
 	})
-
 });

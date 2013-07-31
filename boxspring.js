@@ -1849,15 +1849,13 @@
     },
     "3": function(require, module, exports, global) {
         "use strict";
-        var constructors = boxspring.constructors = {};
-        var has = _.has;
         boxspring.define = function(name, prototype) {
             var sprototype = null;
             var sconstruct = prototype.inherits || boxspring.Object;
             if (sconstruct) {
                 sprototype = sconstruct.prototype;
             }
-            var constructor = has(prototype, "constructor") ? prototype.constructor : sconstruct ? function() {
+            var constructor = _.has(prototype, "constructor") ? prototype.constructor : sconstruct ? function() {
                 return sconstruct.apply(this, arguments);
             } : function() {};
             constructors[name] = constructor;
@@ -1874,6 +1872,7 @@
         boxspring.set = function(object, key, val) {
             return assign(key, val, object || global);
         };
+        var constructors = boxspring.constructors = {};
         var assign = function(key, val, obj) {
             if (!obj) obj = global;
             var nodes = _.isArray(key) ? key : key.split(".");
@@ -1887,13 +1886,12 @@
     },
     "4": function(require, module, exports, global) {
         "use strict";
-        var each = _.each;
         boxspring.extend = function(name, object) {
             var constructor = boxspring.constructors[name];
             if (constructor == null) {
                 throw new Error("The class " + name + " does not exists");
             }
-            each(object, function(val, key) {
+            _.each(object, function(val, key) {
                 if (key === "constructor" || key === "prototype" || key === "parent") return this;
                 constructor[key] = val;
             });
@@ -1902,14 +1900,13 @@
     },
     "5": function(require, module, exports, global) {
         "use strict";
-        var each = _.each;
         boxspring.implement = function(name, object) {
             var constructor = boxspring.constructors[name];
             if (constructor == null) {
                 throw new Error("The class " + name + " does not exists");
             }
             var prototype = constructor.prototype;
-            each(object, function(val, key) {
+            _.each(object, function(val, key) {
                 if (key === "statics") {
                     boxspring.extend(name, val);
                     return;
@@ -1931,8 +1928,6 @@
     },
     "6": function(require, module, exports, global) {
         "use strict";
-        var has = _.has;
-        var forOwn = _.forOwn;
         boxspring.override = function(name, prototype) {
             var inherits = boxspring.constructors[name];
             if (inherits == null) {
@@ -1940,7 +1935,7 @@
             }
             var sconstruct = inherits;
             var sprototype = inherits.prototype;
-            var constructor = has(prototype, "constructor") ? prototype.constructor : sconstruct ? function() {
+            var constructor = _.has(prototype, "constructor") ? prototype.constructor : sconstruct ? function() {
                 return sconstruct.apply(this, arguments);
             } : function() {};
             boxspring.constructors[name] = constructor;
@@ -1950,7 +1945,7 @@
                 constructor.parent = sprototype;
             }
             constructor.prototype.$kind = name;
-            forOwn(sconstruct, function(val, key) {
+            _.forOwn(sconstruct, function(val, key) {
                 if (key !== "prototype" && key !== "constructor" && key !== "parent" && key !== "$properties") {
                     constructor[key] = val;
                 }
@@ -1961,13 +1956,6 @@
     },
     "7": function(require, module, exports, global) {
         "use strict";
-        var has = _.has;
-        var each = _.each;
-        var copy = _.clone;
-        var isEmpty = _.isEmpty;
-        var isArray = _.isArray;
-        var isObject = _.isObject;
-        var isFunction = _.isFunction;
         boxspring.properties = function(name, object) {
             var constructor = boxspring.constructors[name];
             if (constructor == null) {
@@ -1976,26 +1964,26 @@
             var parent = constructor.parent;
             var prototype = constructor.prototype;
             var properties = parent ? parent.constructor.$properties : null;
-            each(object, function(val, key) {
+            _.each(object, function(val, key) {
                 var name = "__" + key;
-                var value = has(val, "value") ? val.value : has(properties, name) && has(properties[name], "value") ? properties[name].value : null;
-                var write = has(val, "write") ? val.write : has(properties, name) && has(properties[name], "write") ? properties[name].write : true;
-                var clone = has(val, "clone") ? val.clone : has(properties, name) && has(properties[name], "clone") ? properties[name].clone : false;
-                var onSet = has(val, "onSet") ? val.onSet : has(properties, name) && has(properties[name], "onSet") ? properties[name].onSet : function(value) {
+                var value = _.has(val, "value") ? val.value : _.has(properties, name) && _.has(properties[name], "value") ? properties[name].value : null;
+                var write = _.has(val, "write") ? val.write : _.has(properties, name) && _.has(properties[name], "write") ? properties[name].write : true;
+                var clone = _.has(val, "clone") ? val.clone : _.has(properties, name) && _.has(properties[name], "clone") ? properties[name].clone : false;
+                var onSet = _.has(val, "onSet") ? val.onSet : _.has(properties, name) && _.has(properties[name], "onSet") ? properties[name].onSet : function(value) {
                     return value;
                 };
-                var onGet = has(val, "onGet") ? val.onGet : has(properties, name) && has(properties[name], "onGet") ? properties[name].onGet : function(value) {
+                var onGet = _.has(val, "onGet") ? val.onGet : _.has(properties, name) && _.has(properties[name], "onGet") ? properties[name].onGet : function(value) {
                     return value;
                 };
                 var setup = function() {
-                    if (has(this, name)) return;
+                    if (_.has(this, name)) return;
                     if (value) switch (true) {
-                      case isFunction(value):
+                      case _.isFunction(value):
                         this[name] = value.call(this);
                         return;
-                      case isArray(value):
-                      case isObject(value):
-                        this[name] = copy(value);
+                      case _.isArray(value):
+                      case _.isObject(value):
+                        this[name] = _.clone(value);
                         return;
                     }
                     this[name] = value;
@@ -2015,7 +2003,7 @@
                     get: function() {
                         setup.call(this);
                         var v = onGet.call(this, this[name]);
-                        return clone ? copy(v) : v;
+                        return clone ? _.clone(v) : v;
                     },
                     set: function(value) {
                         if (write === "once") {
@@ -2049,9 +2037,6 @@
     },
     "8": function(require, module, exports, global) {
         "use strict";
-        var Event = null;
-        var forIn = _.forIn;
-        var UID = 0;
         var O = boxspring.define("boxspring.Object", {
             inherits: null,
             statics: {
@@ -2101,9 +2086,6 @@
                 }
             },
             constructor: function() {
-                if (Event === null) {
-                    Event = boxspring.event.Event;
-                }
                 this.__bound = {};
                 this.__propertyListeners = {};
                 this.__propertyObservers = {};
@@ -2171,9 +2153,9 @@
                 return this;
             },
             notifyPropertyChangeListeners: function(property, newValue, oldValue) {
-                var event = new Event("propertychange", false, true);
-                event.__setTarget(this);
-                event.__setSource(this);
+                var event = new boxspring.event.Event("propertychange", false, true);
+                event.setTarget(this);
+                event.setSource(this);
                 if (this.onPropertyChange) {
                     this.onPropertyChange(this, property, newValue, oldValue, event);
                 }
@@ -2193,7 +2175,7 @@
                         remPropertyChangeObserver(oldValue, observerInstance, observerProperty, observerChain);
                         addPropertyChangeObserver(newValue, observerInstance, observerProperty, observerChain);
                     }
-                    event.__setParameters([ observerProperty, propertyNewValue, propertyOldValue ]);
+                    event.setParameters([ observerProperty, propertyNewValue, propertyOldValue ]);
                     if (propertyNewValue === propertyOldValue) continue;
                     var callbacks = observerInstance.__propertyListeners[observerProperty];
                     if (callbacks) {
@@ -2218,6 +2200,7 @@
             __propertyListeners: null,
             __propertyObservers: null
         });
+        var UID = 0;
         var addPropertyChangeObserver = function(object, observer, property, path) {
             O.forPath(object, path || property, function(owner, value, name, head, tail) {
                 var observers = owner.__propertyObservers[name];
@@ -2658,13 +2641,6 @@
                     value: false
                 }
             },
-            constructor: function(type, bubbleable, cancelable) {
-                Event.parent.constructor.call(this);
-                this.__type = type;
-                this.__bubbleable = bubbleable;
-                this.__cancelable = cancelable;
-                return this;
-            },
             stop: function() {
                 this.__stopped = true;
                 return this;
@@ -2674,15 +2650,22 @@
                 this.__canceled = true;
                 return this;
             },
-            __setTarget: function(target) {
+            constructor: function(type, bubbleable, cancelable) {
+                Event.parent.constructor.call(this);
+                this.__bubbleable = bubbleable;
+                this.__cancelable = cancelable;
+                this.__type = type;
+                return this;
+            },
+            setTarget: function(target) {
                 this.__target = target;
                 return this;
             },
-            __setSource: function(source) {
+            setSource: function(source) {
                 this.__source = source;
                 return this;
             },
-            __setParameters: function(parameters) {
+            setParameters: function(parameters) {
                 this.__parameters = Array.prototype.slice.call(parameters);
                 return this;
             }
@@ -2690,7 +2673,6 @@
     },
     i: function(require, module, exports, global) {
         "use strict";
-        var slice = Array.prototype.slice;
         var Emitter = boxspring.define("boxspring.event.Emitter", {
             properties: {
                 parentReceiver: {
@@ -2778,12 +2760,12 @@
                 }
                 var parameters = slice.call(arguments, 1);
                 if (parameters.length) {
-                    event.__setParameters(parameters);
+                    event.setParameters(parameters);
                 }
                 if (event.__source === null) {
-                    event.__setSource(this);
+                    event.setSource(this);
                 }
-                event.__setTarget(this);
+                event.setTarget(this);
                 var listeners = this.__listeners && this.__listeners[event.type];
                 if (listeners) {
                     var args = event.parameters;
@@ -2799,11 +2781,12 @@
                 }
                 return this;
             },
-            __setParentReceiver: function(receiver) {
+            setParentReceiver: function(receiver) {
                 this.__parentReceiver = receiver;
                 return this;
             }
         });
+        var slice = Array.prototype.slice;
     },
     j: function(require, module, exports, global) {
         "use strict";
@@ -2824,13 +2807,11 @@
                 RenderLoop.parent.constructor.apply(this, arguments);
                 this.__levels = [];
                 this.__queues = {};
-                this.__update = this.bind("update");
                 return this;
             },
             destroy: function() {
                 this.__levels = null;
                 this.__queues = null;
-                this.__update = null;
                 RenderLoop.parent.destroy.call(this);
             },
             run: function(action, level) {
@@ -2846,7 +2827,7 @@
                 if (index > -1) return this;
                 queue.push(action);
                 if (this.__request == null) {
-                    this.__request = requestFrame(this.__update);
+                    this.__request = requestFrame(this.bind("loop"));
                 }
                 if (this.__processing && this.__processingLevel >= level) {
                     this.__reschedule = true;
@@ -2865,11 +2846,11 @@
                     }
                 }
                 if (this.__actions === 0) {
-                    this.__request = cancelFrame(this.__update);
+                    this.__request = cancelFrame(this.bind("loop"));
                 }
                 return this;
             },
-            update: function() {
+            loop: function() {
                 var now = Date.now();
                 this.__processing = true;
                 this.__levels.sort();
@@ -2892,7 +2873,7 @@
                 this.__processingLevel = null;
                 if (this.__reschedule) {
                     this.__reschedule = false;
-                    this.__request = requestFrame(this.__update);
+                    this.__request = requestFrame(this.bind("loop"));
                 } else {
                     this.__request = null;
                 }
@@ -3208,6 +3189,9 @@
                 AnimationRunner.remove(this);
                 AnimationGroup.parent.destroy.call(this);
             },
+            progress: function(progress) {
+                _.invoke(this.__animations, "progress", progress);
+            },
             addAnimation: function(animation) {
                 _.include(this.__animations, animation);
                 return this;
@@ -3222,9 +3206,6 @@
             },
             animationAt: function(index) {
                 return this.__animations[index] || null;
-            },
-            progress: function(progress) {
-                _.invoke(this.__animations, "progress", progress);
             }
         });
     },
@@ -3353,7 +3334,6 @@
             },
             updateLayout: function(children) {}
         });
-        Layout.parse;
     },
     y: function(require, module, exports, global) {
         "use strict";
@@ -4044,9 +4024,9 @@
                     index = 0;
                 }
                 children.splice(index, 1, view);
-                view.__setWindow(this.window);
-                view.__setParent(this);
-                view.__setParentReceiver(this);
+                view.setWindow(this.window);
+                view.setParent(this);
+                view.setParentReceiver(this);
                 this.scheduleLayout();
                 this.emit("add", view);
                 return this;
@@ -4071,9 +4051,9 @@
                 var view = children[index];
                 if (view == null) return this;
                 children.splice(index, 1);
-                view.__setWindow(null);
-                view.__setParent(null);
-                view.__setParentReceiver(null);
+                view.setWindow(null);
+                view.setParent(null);
+                view.setParentReceiver(null);
                 this.scheduleLayout();
                 this.emit("remove", view);
                 return this;
@@ -4267,15 +4247,7 @@
             onTouchStart: function(touches, e) {},
             onTouchMove: function(touches, e) {},
             onTouchEnd: function(touches, e) {},
-            __animatedPropertyValues: null,
-            __redrawArea: null,
-            __redrawScheduled: false,
-            __layoutScheduled: false,
-            __measuredSizeXSet: false,
-            __measuredSizeYSet: false,
-            __measuredOffsetXSet: false,
-            __measuredOffsetYSet: false,
-            __setParent: function(value) {
+            setParent: function(value) {
                 var parent = this.__parent;
                 if (parent && value === null) {
                     this.__parent = value;
@@ -4291,7 +4263,7 @@
                 }
                 return this;
             },
-            __setWindow: function(value) {
+            setWindow: function(value) {
                 var window = this.__window;
                 if (window && value === null) {
                     this.__window = value;
@@ -4305,9 +4277,17 @@
                     this.emit("addtowindow", window);
                     return this;
                 }
-                _.invoke(this.__children, "__setWindow", value);
+                _.invoke(this.__children, "setWindow", value);
                 return this;
-            }
+            },
+            __animatedPropertyValues: null,
+            __redrawArea: null,
+            __redrawScheduled: false,
+            __layoutScheduled: false,
+            __measuredSizeXSet: false,
+            __measuredSizeYSet: false,
+            __measuredOffsetXSet: false,
+            __measuredOffsetYSet: false
         });
         var scheduleReflowProperties = [ "size.x", "size.y", "minSize.x", "minSize.y", "maxSize.x", "maxSize.y", "visible", "margin.top", "margin.left", "margin.right", "margin.bottom", "position.top", "position.left", "position.right", "position.bottom" ];
         var scheduleLayoutProperties = [ "measuredSize.x", "measuredSize.y", "borderWidth", "padding.top", "padding.left", "padding.right", "padding.bottom", "layout" ];
@@ -4600,11 +4580,11 @@
             },
             onAdd: function(view, e) {
                 Window.parent.onAdd.call(this, view);
-                view.__setWindow(this);
+                view.setWindow(this);
             },
             onRemove: function(view, e) {
                 Window.parent.onRemove.call(this, view);
-                view.__setWindow(null);
+                view.setWindow(null);
             }
         });
         var instance = null;
