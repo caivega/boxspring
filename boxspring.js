@@ -17,8 +17,8 @@
         require("g");
         require("j");
         require("l");
-        require("w");
-        require("z");
+        require("y");
+        require("11");
         module.exports = boxspring;
     },
     "1": function(require, module, exports, global) {
@@ -2973,6 +2973,8 @@
         require("t");
         require("u");
         require("v");
+        require("w");
+        require("x");
     },
     m: function(require, module, exports, global) {
         "use strict";
@@ -3327,10 +3329,138 @@
     },
     w: function(require, module, exports, global) {
         "use strict";
-        require("x");
-        require("y");
+        var ViewPropertyAnimation = boxspring.define("boxspring.animation.ViewPropertyAnimation", {
+            inherits: boxspring.animation.ValueAnimation,
+            properties: {
+                view: {},
+                property: {}
+            },
+            onPropertyChange: function(target, property, value) {
+                ViewPropertyAnimation.parent.onPropertyChange.apply(this, arguments);
+                if (property === "property" || property === "view" && value) {
+                    var view = this.view;
+                    if (view == null) return;
+                    var evaluator = view.animatedPropertyEvaluator(this.property);
+                    if (evaluator == null) throw new Error("Property " + this.property + "is not animatable");
+                    this.evaluator = evaluator;
+                }
+            },
+            onStart: function(e) {
+                this.view.emit("propertyanimationstart", this.property, this.from);
+            },
+            onPause: function(e) {
+                this.view.emit("propertyanimationpause", this.property, this.from);
+            },
+            onUpdate: function(e) {
+                this.view.emit("propertyanimationupdate", this.property, this.value);
+            },
+            onEnd: function(e) {
+                this.view.emit("propertyanimationend", this.property, this.value);
+            }
+        });
     },
     x: function(require, module, exports, global) {
+        "use strict";
+        var AnimationRunner = boxspring.animation.AnimationRunner;
+        var PropertyAnimation = boxspring.animation.PropertyAnimation;
+        var ViewPropertyTransaction = boxspring.define("boxspring.animation.ViewPropertyTransaction", {
+            inherits: boxspring.animation.AnimationGroup,
+            constructor: function() {
+                ViewPropertyTransaction.parent.constructor.call(this);
+                _.include(instances, this);
+                this.__animatedViews = {};
+                this.__animatedItems = {};
+                this.__animatedProperties = {};
+                return this;
+            },
+            destroy: function() {
+                _.remove(instances, this);
+                this.__animatedViews = null;
+                this.__animatedItems = null;
+                this.__animatedProperties = null;
+                ViewPropertyTransaction.parent.destroy.call(this);
+            },
+            addAnimatedProperty: function(view, property, from, to) {
+                this.__animatedViews[view.UID] = view;
+                var animations = this.__animatedProperties[property];
+                if (animations == null) {
+                    animations = this.__animatedProperties[property] = {};
+                }
+                for (var i = 0; i < instances.length; i++) {
+                    var transaction = instances[i];
+                    if (transaction === this) continue;
+                    var animation = transaction.animationForViewProperty(view, property);
+                    if (animation === null) continue;
+                    transaction.removeAnimatedProperty(view, property);
+                    animations[view.UID] = animation;
+                    if (transaction.running) {
+                        animation.from = animation.value;
+                        animation.end();
+                    } else {
+                        animation.from = from;
+                    }
+                    this.__animatedItems[view.UID]++;
+                    break;
+                }
+                var animation = animations[view.UID];
+                if (animation == null) {
+                    animation = animations[view.UID] = new boxspring.animation.ViewPropertyAnimation;
+                    animation.property = property;
+                    animation.view = view;
+                    animation.from = from;
+                    if (this.__animatedItems[view.UID] == null) {
+                        this.__animatedItems[view.UID] = 0;
+                    }
+                    this.__animatedItems[view.UID]++;
+                }
+                animation.to = to;
+                animation.__transaction = this;
+                this.addAnimation(animation);
+                return this;
+            },
+            removeAnimatedProperty: function(view, property) {
+                var animations = this.__animatedProperties[property];
+                if (animations == null) return this;
+                var animation = animations[view.UID];
+                if (animation == null) return this;
+                if (--this.__animatedItems[view.UID] === 0) {
+                    delete this.__animatedViews[view.UID];
+                    delete this.__animatedItems[view.UID];
+                }
+                delete animations[view.UID];
+                this.removeAnimation(animation);
+                animation.__transaction = null;
+                return this;
+            },
+            animationForViewProperty: function(view, property) {
+                var animations = this.__animatedProperties[property];
+                if (animations == null) return null;
+                return animations[view.UID] || null;
+            },
+            onStart: function(e) {
+                ViewPropertyTransaction.parent.onStart.apply(this, arguments);
+                _.invoke(this.__animatedViews, "emit", "animationstart");
+            },
+            onPause: function(e) {
+                ViewPropertyTransaction.parent.onPause.apply(this, arguments);
+                _.invoke(this.__animatedViews, "emit", "animationpause");
+            },
+            onEnd: function(e) {
+                ViewPropertyTransaction.parent.onEnd.apply(this, arguments);
+                _.invoke(this.__animatedViews, "emit", "animationend");
+            },
+            __animatedViews: null,
+            __animatedItems: null,
+            __animatedProperties: null
+        });
+        var instances = [];
+    },
+    y: function(require, module, exports, global) {
+        "use strict";
+        require("z");
+        require("10");
+    },
+    z: function(require, module, exports, global) {
         "use strict";
         var Layout = boxspring.define("boxspring.layout.Layout", {
             properties: {
@@ -3401,7 +3531,7 @@
             updateLayout: function(children) {}
         });
     },
-    y: function(require, module, exports, global) {
+    "10": function(require, module, exports, global) {
         "use strict";
         var LinearLayout = boxspring.define("boxspring.layout.LinearLayout", {
             inherits: boxspring.layout.Layout,
@@ -3665,146 +3795,16 @@
             }
         });
     },
-    z: function(require, module, exports, global) {
+    "11": function(require, module, exports, global) {
         "use strict";
-        require("10");
-        require("11");
         require("12");
         require("13");
         require("14");
         require("15");
     },
-    "10": function(require, module, exports, global) {
-        "use strict";
-        var ViewPropertyAnimation = boxspring.define("boxspring.view.ViewPropertyAnimation", {
-            inherits: boxspring.animation.ValueAnimation,
-            properties: {
-                view: {},
-                property: {}
-            },
-            onPropertyChange: function(target, property, value) {
-                ViewPropertyAnimation.parent.onPropertyChange.apply(this, arguments);
-                if (property === "property" || property === "view" && value) {
-                    var view = this.view;
-                    if (view == null) return;
-                    var evaluator = view.animatedPropertyEvaluator(this.property);
-                    if (evaluator == null) throw new Error("Property " + this.property + "is not animatable");
-                    this.evaluator = evaluator;
-                }
-            },
-            onStart: function(e) {
-                this.view.emit("propertyanimationstart", this.property, this.from);
-            },
-            onPause: function(e) {
-                this.view.emit("propertyanimationpause", this.property, this.from);
-            },
-            onUpdate: function(e) {
-                this.view.emit("propertyanimationupdate", this.property, this.value);
-            },
-            onEnd: function(e) {
-                this.view.emit("propertyanimationend", this.property, this.value);
-            }
-        });
-    },
-    "11": function(require, module, exports, global) {
-        "use strict";
-        var AnimationRunner = boxspring.animation.AnimationRunner;
-        var PropertyAnimation = boxspring.animation.PropertyAnimation;
-        var ViewPropertyAnimationGroup = boxspring.define("boxspring.view.ViewPropertyAnimationGroup", {
-            inherits: boxspring.animation.AnimationGroup,
-            constructor: function() {
-                ViewPropertyAnimationGroup.parent.constructor.call(this);
-                _.include(instances, this);
-                this.__animatedViews = {};
-                this.__animatedItems = {};
-                this.__animatedProperties = {};
-                return this;
-            },
-            destroy: function() {
-                _.remove(instances, this);
-                this.__animatedViews = null;
-                this.__animatedItems = null;
-                this.__animatedProperties = null;
-                ViewPropertyAnimationGroup.parent.destroy.call(this);
-            },
-            addAnimatedProperty: function(view, property, from, to) {
-                this.__animatedViews[view.UID] = view;
-                var animations = this.__animatedProperties[property];
-                if (animations == null) {
-                    animations = this.__animatedProperties[property] = {};
-                }
-                for (var i = 0; i < instances.length; i++) {
-                    var transaction = instances[i];
-                    if (transaction === this) continue;
-                    var animation = transaction.animationForViewProperty(view, property);
-                    if (animation === null) continue;
-                    transaction.removeAnimatedProperty(view, property);
-                    animations[view.UID] = animation;
-                    if (transaction.running) {
-                        animation.from = animation.value;
-                        animation.end();
-                    } else {
-                        animation.from = from;
-                    }
-                    this.__animatedItems[view.UID]++;
-                    break;
-                }
-                var animation = animations[view.UID];
-                if (animation == null) {
-                    animation = animations[view.UID] = new boxspring.view.ViewPropertyAnimation;
-                    animation.property = property;
-                    animation.view = view;
-                    animation.from = from;
-                    if (this.__animatedItems[view.UID] == null) {
-                        this.__animatedItems[view.UID] = 0;
-                    }
-                    this.__animatedItems[view.UID]++;
-                }
-                animation.to = to;
-                animation.__transaction = this;
-                this.addAnimation(animation);
-                return this;
-            },
-            removeAnimatedProperty: function(view, property) {
-                var animations = this.__animatedProperties[property];
-                if (animations == null) return this;
-                var animation = animations[view.UID];
-                if (animation == null) return this;
-                if (--this.__animatedItems[view.UID] === 0) {
-                    delete this.__animatedViews[view.UID];
-                    delete this.__animatedItems[view.UID];
-                }
-                delete animations[view.UID];
-                this.removeAnimation(animation);
-                animation.__transaction = null;
-                return this;
-            },
-            animationForViewProperty: function(view, property) {
-                var animations = this.__animatedProperties[property];
-                if (animations == null) return null;
-                return animations[view.UID] || null;
-            },
-            onStart: function(e) {
-                ViewPropertyAnimationGroup.parent.onStart.apply(this, arguments);
-                _.invoke(this.__animatedViews, "emit", "animationstart");
-            },
-            onPause: function(e) {
-                ViewPropertyAnimationGroup.parent.onPause.apply(this, arguments);
-                _.invoke(this.__animatedViews, "emit", "animationpause");
-            },
-            onEnd: function(e) {
-                ViewPropertyAnimationGroup.parent.onEnd.apply(this, arguments);
-                _.invoke(this.__animatedViews, "emit", "animationend");
-            },
-            __animatedViews: null,
-            __animatedItems: null,
-            __animatedProperties: null
-        });
-        var instances = [];
-    },
     "12": function(require, module, exports, global) {
         "use strict";
-        var ViewPropertyAnimationGroup = boxspring.view.ViewPropertyAnimationGroup;
+        var ViewPropertyTransaction = boxspring.animation.ViewPropertyTransaction;
         var View = boxspring.define("boxspring.view.View", {
             inherits: boxspring.event.Emitter,
             statics: {
@@ -3813,11 +3813,11 @@
                     if (layoutRoot) {
                         layoutRoot.layoutIfNeeded();
                     }
-                    var group = new ViewPropertyAnimationGroup;
+                    var group = new ViewPropertyTransaction;
                     if (duration) group.duration = duration;
                     if (equation) group.equation = equation;
-                    group.on("start", onViewPropertyAnimationGroupStart);
-                    group.on("end", onViewPropertyAnimationGroupEnd);
+                    group.on("start", onViewPropertyTransactionStart);
+                    group.on("end", onViewPropertyTransactionEnd);
                     _.include(animations, group);
                     return this;
                 },
@@ -4271,7 +4271,7 @@
                 return this;
             },
             onPropertyChange: function(target, property, newValue, oldValue, e) {
-                var ViewPropertyAnimationGroup = boxspring.view.ViewPropertyAnimationGroup;
+                var ViewPropertyTransaction = boxspring.animation.ViewPropertyTransaction;
                 if (this.reflowOnPropertyChange(property)) this.scheduleReflow();
                 if (this.layoutOnPropertyChange(property)) this.scheduleLayout();
                 if (layoutRoot === null) {
@@ -4361,8 +4361,8 @@
         var layoutRoot = null;
         var animations = [];
         var animating = 0;
-        var onViewPropertyAnimationGroupStart = function(e) {};
-        var onViewPropertyAnimationGroupEnd = function(e) {
+        var onViewPropertyTransactionStart = function(e) {};
+        var onViewPropertyTransactionEnd = function(e) {
             e.source.destroy();
             animating--;
         };
