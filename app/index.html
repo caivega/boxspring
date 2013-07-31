@@ -20,6 +20,7 @@
 	<script type="text/javascript">
 
 
+
 		var View             = boxspring.view.View
 		var Window           = boxspring.view.Window
 
@@ -50,22 +51,15 @@
 			var animate = function() {
 
 				var view = createView()
-				view.on('animationend', function() {
-					console.log('Waaaaaa')
-				})
+				view.size.y = 0
+				view.opacity = 0
+				root.addChild(view)
 
-			//	root.layout.orientation = 'horizontal'
-
-
-
-				// View.setupAnimation(1000)
-				// view.size.y = 'fill'
-
-
-				View.setupAnimation(2000)
-
-root.addChild(view)
-				View.startAnimation()
+				View.setupAnimation(1200)
+				view.size.y = 'fill'
+				view.opacity = 1
+				 //root.layout.orientation = root.layout.orientation === 'horizontal' ? 'vertical' : 'horizontal'
+				 View.startAnimation()
 
 				// View.setupAnimation(1000)
 				// root.layout.orientation = root.layout.orientation === 'horizontal' ? 'vertical' : 'horizontal';
@@ -75,6 +69,14 @@ root.addChild(view)
 			document.addEventListener('click', animate)
 			document.addEventListener('touchend', animate)
 
+			// var RenderLoop = boxspring.render.RenderLoop
+
+			// var tick = function() {
+			// 	console.log('Tack')
+			// }
+
+			// RenderLoop.run(tick)
+			// RenderLoop.cancel(tick)
 
 	</script>
 

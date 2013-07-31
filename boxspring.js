@@ -1981,7 +1981,10 @@
                 var value = has(val, "value") ? val.value : has(properties, name) && has(properties[name], "value") ? properties[name].value : null;
                 var write = has(val, "write") ? val.write : has(properties, name) && has(properties[name], "write") ? properties[name].write : true;
                 var clone = has(val, "clone") ? val.clone : has(properties, name) && has(properties[name], "clone") ? properties[name].clone : false;
-                var check = has(val, "check") ? val.check : has(properties, name) && has(properties[name], "check") ? properties[name].check : function(value) {
+                var onSet = has(val, "onSet") ? val.onSet : has(properties, name) && has(properties[name], "onSet") ? properties[name].onSet : function(value) {
+                    return value;
+                };
+                var onGet = has(val, "onGet") ? val.onGet : has(properties, name) && has(properties[name], "onGet") ? properties[name].onGet : function(value) {
                     return value;
                 };
                 var setup = function() {
@@ -2005,12 +2008,14 @@
                     value: value,
                     write: write,
                     clone: clone,
-                    check: check
+                    onSet: onSet,
+                    onGet: onGet
                 };
                 Object.defineProperty(prototype, key, {
                     get: function() {
                         setup.call(this);
-                        return clone ? copy(this[name]) : this[name];
+                        var v = onGet.call(this, this[name]);
+                        return clone ? copy(v) : v;
                     },
                     set: function(value) {
                         if (write === "once") {
@@ -2024,7 +2029,7 @@
                         }
                         setup.call(this);
                         var oldValue = this[name];
-                        var newValue = check.call(this, value, oldValue);
+                        var newValue = onSet.call(this, value, oldValue);
                         if (newValue === undefined) newValue = value;
                         if (newValue === oldValue) return;
                         this[name] = newValue;
@@ -2376,13 +2381,13 @@
             properties: {
                 x: {
                     value: 0,
-                    check: function(value) {
+                    onSet: function(value) {
                         return value || 0;
                     }
                 },
                 y: {
                     value: 0,
-                    check: function(value) {
+                    onSet: function(value) {
                         return value || 0;
                     }
                 }
@@ -2406,13 +2411,13 @@
             properties: {
                 x: {
                     value: 0,
-                    check: function(value) {
+                    onSet: function(value) {
                         return value || 0;
                     }
                 },
                 y: {
                     value: 0,
-                    check: function(value) {
+                    onSet: function(value) {
                         return value || 0;
                     }
                 }
@@ -2477,25 +2482,25 @@
             properties: {
                 top: {
                     value: 0,
-                    check: function(value) {
+                    onSet: function(value) {
                         return value || 0;
                     }
                 },
                 bottom: {
                     value: 0,
-                    check: function(value) {
+                    onSet: function(value) {
                         return value || 0;
                     }
                 },
                 left: {
                     value: 0,
-                    check: function(value) {
+                    onSet: function(value) {
                         return value || 0;
                     }
                 },
                 right: {
                     value: 0,
-                    check: function(value) {
+                    onSet: function(value) {
                         return value || 0;
                     }
                 }
@@ -2532,37 +2537,37 @@
             properties: {
                 x: {
                     value: 0,
-                    check: function(value) {
+                    onSet: function(value) {
                         return value || 0;
                     }
                 },
                 y: {
                     value: 0,
-                    check: function(value) {
+                    onSet: function(value) {
                         return value || 0;
                     }
                 },
                 top: {
                     value: 0,
-                    check: function(value) {
+                    onSet: function(value) {
                         return value || 0;
                     }
                 },
                 bottom: {
                     value: 0,
-                    check: function(value) {
+                    onSet: function(value) {
                         return value || 0;
                     }
                 },
                 left: {
                     value: 0,
-                    check: function(value) {
+                    onSet: function(value) {
                         return value || 0;
                     }
                 },
                 right: {
                     value: 0,
-                    check: function(value) {
+                    onSet: function(value) {
                         return value || 0;
                     }
                 }
@@ -2817,89 +2822,96 @@
             },
             constructor: function() {
                 RenderLoop.parent.constructor.apply(this, arguments);
-                this.__priority = [];
-                this.__schedules = {};
-                this.__callbacks = [];
+                this.__levels = [];
+                this.__queues = {};
+                this.__update = this.bind("update");
                 return this;
             },
             destroy: function() {
-                this.__priority = null;
-                this.__schedules = null;
-                this.__callbacks = null;
+                this.__levels = null;
+                this.__queues = null;
+                this.__update = null;
                 RenderLoop.parent.destroy.call(this);
             },
-            run: function(callback, priority) {
-                if (this.__frame == null) {
-                    this.__frame = requestFrame(this.bind("onRefresh"));
-                } else {
-                    if (this.__processing) {
-                        this.__reschedule = true;
+            run: function(action, level) {
+                if (level == null) {
+                    level = RenderLoop.DEFAULT_PRIORITY;
+                }
+                _.include(this.__levels, level);
+                var queue = this.__queues[level];
+                if (queue == null) {
+                    queue = this.__queues[level] = [];
+                }
+                var index = queue.indexOf(action);
+                if (index > -1) return this;
+                queue.push(action);
+                if (this.__request == null) {
+                    this.__request = requestFrame(this.__update);
+                }
+                if (this.__processing && this.__processingLevel >= level) {
+                    this.__reschedule = true;
+                }
+                this.__actions++;
+                return this;
+            },
+            cancel: function(action) {
+                for (var level in this.__queues) {
+                    var queue = this.__queues[level];
+                    var index = queue.indexOf(action);
+                    if (index > -1) {
+                        queue.splice(index, 1);
+                        this.__actions--;
+                        break;
                     }
                 }
-                priority = priority == null ? RenderLoop.DEFAULT_PRIORITY : priority;
-                var index = this.__callbacks.indexOf(callback);
-                if (index > -1) return this;
-                var index = this.__priority.indexOf(priority);
-                if (index === -1) {
-                    this.__priority.push(priority);
-                    this.__priority.sort();
-                }
-                var schedule = this.__schedules[priority];
-                if (schedule == null) {
-                    schedule = this.__schedules[priority] = [];
-                }
-                schedule.push(callback);
-                this.__callbacks.push(callback);
-                return this;
-            },
-            cancel: function(callback) {
-                var index = this.__callbacks.indexOf(callback);
-                if (index > -1) return this;
-                this.__callbacks.splice(index, 1);
-                for (var i = 0; i < this.__priority.length; i++) {
-                    var priority = this.__priority[i];
-                    var callbacks = this.__schedules[priority];
-                    if (callbacks == null) continue;
-                    var index = callbacks.indexOf(callback);
-                    if (index === -1) continue;
-                    callbacks.splice(index, 1);
-                    return this;
+                if (this.__actions === 0) {
+                    this.__request = cancelFrame(this.__update);
                 }
                 return this;
             },
-            onRefresh: function() {
+            update: function() {
                 var now = Date.now();
                 this.__processing = true;
-                for (var i = 0; i < this.__priority.length; i++) {
-                    var priority = this.__priority[i];
-                    var callbacks = this.__schedules[priority];
-                    if (callbacks == null) continue;
-                    each(this.__schedules[priority].slice(), function(callback) {
-                        callback.call(null, now);
-                    });
-                    this.__callbacks[priority] = [];
+                this.__levels.sort();
+                for (var i = 0; i < this.__levels.length; i++) {
+                    var level = this.__levels[i];
+                    var queue = this.__queues[level];
+                    if (queue.length === 0) continue;
+                    this.__queues[level] = [];
+                    this.__processingLevel = level;
+                    this.__processingQueue = queue;
+                    for (var j = 0; j < queue.length; j++) {
+                        this.__processingAction = queue[j];
+                        this.__processingAction.call(null, now);
+                        this.__processingAction = null;
+                        this.__actions--;
+                    }
                 }
                 this.__processing = false;
+                this.__processingQueue = null;
+                this.__processingLevel = null;
                 if (this.__reschedule) {
                     this.__reschedule = false;
-                    this.__frame = requestFrame(this.bind("onRefresh"));
+                    this.__request = requestFrame(this.__update);
                 } else {
-                    this.__frame = null;
+                    this.__request = null;
                 }
+                return this;
             },
-            __frame: null,
-            __callbacks: null,
-            __schedules: null,
-            __priority: null,
+            __levels: null,
+            __queues: null,
+            __request: null,
+            __actions: 0,
             __processing: false,
+            __processingLevel: null,
+            __processingQueue: null,
+            __processingAction: null,
             __reschedule: false
         });
         var instance = new RenderLoop;
         RenderLoop.DEFAULT_PRIORITY = 50;
         RenderLoop.ANIMATION_PRIORITY = 250;
         RenderLoop.RENDER_PRIORITY = 500;
-        var find = _.find;
-        var each = _.each;
         var cancelFrame = webkitCancelAnimationFrame;
         var requestFrame = webkitRequestAnimationFrame;
     },
@@ -2978,7 +2990,7 @@
                     animation.tick(now);
                 }
             }
-            play();
+            if (animations.length) play();
         };
         var onAnimationStart = function(e) {
             _.include(animations, e.source);
@@ -2996,7 +3008,7 @@
     r: function(require, module, exports, global) {
         "use strict";
         var bezier = require("s");
-        var Animator = boxspring.define("boxspring.animation.Animator", {
+        var Animation = boxspring.define("boxspring.animation.Animation", {
             inherits: boxspring.event.Emitter,
             properties: {
                 duration: {
@@ -3010,7 +3022,7 @@
                 },
                 repeat: {
                     value: 0,
-                    check: function(value) {
+                    onSet: function(value) {
                         if (value === true) return Infinity;
                     }
                 },
@@ -3020,7 +3032,7 @@
                 }
             },
             constructor: function() {
-                Animator.parent.constructor.call(this);
+                Animation.parent.constructor.call(this);
                 this.on("start", this.bind("onStart"));
                 this.on("pause", this.bind("onPause"));
                 this.on("end", this.bind("onEnd"));
@@ -3030,7 +3042,7 @@
                 this.off("start", this.bind("onStart"));
                 this.off("pause", this.bind("onPause"));
                 this.off("end", this.bind("onEnd"));
-                Animator.parent.destroy.call(this);
+                Animation.parent.destroy.call(this);
             },
             start: function() {
                 if (this.__running) return this;
@@ -3177,58 +3189,8 @@
     t: function(require, module, exports, global) {
         "use strict";
         var AnimationRunner = boxspring.animation.AnimationRunner;
-        var ValueAnimator = boxspring.define("boxspring.animation.ValueAnimator", {
-            inherits: boxspring.animation.Animator,
-            properties: {
-                evaluator: {
-                    value: function() {
-                        return new boxspring.animation.NumberEvaluator;
-                    }
-                },
-                value: {},
-                from: {},
-                to: {}
-            },
-            constructor: function() {
-                ValueAnimator.parent.constructor.call(this);
-                this.on("update", this.bind("onUpdate"));
-                AnimationRunner.add(this);
-                return this;
-            },
-            destroy: function() {
-                AnimationRunner.remove(this);
-                this.off("update", this.bind("onUpdate"));
-                ValueAnimator.parent.destroy.call(this);
-            },
-            progress: function(progress) {
-                this.emit("update", this.value = this.evaluator.evaluate(progress, this.from, this.to));
-            },
-            onUpdate: function(value) {}
-        });
-    },
-    u: function(require, module, exports, global) {
-        "use strict";
-        var ObjectAnimator = boxspring.define("boxspring.animation.ObjectAnimator", {
-            inherits: boxspring.animation.ValueAnimator,
-            properties: {
-                target: {},
-                property: {}
-            },
-            progress: function(progress) {
-                PropertyAnimation.parent.progress.call(this, progress);
-                var target = this.target;
-                if (target == null) throw new Error("Missing target for object animator");
-                var property = this.property;
-                if (property == null) throw new Error("Missing property for object animator");
-                target.set(property, this.value);
-            }
-        });
-    },
-    v: function(require, module, exports, global) {
-        "use strict";
-        var AnimationRunner = boxspring.animation.AnimationRunner;
         var AnimationGroup = boxspring.define("boxspring.animation.AnimationGroup", {
-            inherits: boxspring.animation.Animator,
+            inherits: boxspring.animation.Animation,
             properties: {
                 animations: {
                     write: false,
@@ -3242,6 +3204,7 @@
                 return this;
             },
             destroy: function() {
+                _.invoke(this.__animations, "destroy");
                 AnimationRunner.remove(this);
                 AnimationGroup.parent.destroy.call(this);
             },
@@ -3262,6 +3225,56 @@
             },
             progress: function(progress) {
                 _.invoke(this.__animations, "progress", progress);
+            }
+        });
+    },
+    u: function(require, module, exports, global) {
+        "use strict";
+        var AnimationRunner = boxspring.animation.AnimationRunner;
+        var ValueAnimation = boxspring.define("boxspring.animation.ValueAnimation", {
+            inherits: boxspring.animation.Animation,
+            properties: {
+                evaluator: {
+                    value: function() {
+                        return new boxspring.animation.NumberEvaluator;
+                    }
+                },
+                value: {},
+                from: {},
+                to: {}
+            },
+            constructor: function() {
+                ValueAnimation.parent.constructor.call(this);
+                this.on("update", this.bind("onUpdate"));
+                AnimationRunner.add(this);
+                return this;
+            },
+            destroy: function() {
+                AnimationRunner.remove(this);
+                this.off("update", this.bind("onUpdate"));
+                ValueAnimation.parent.destroy.call(this);
+            },
+            progress: function(progress) {
+                this.emit("update", this.value = this.evaluator.evaluate(progress, this.from, this.to));
+            },
+            onUpdate: function(value) {}
+        });
+    },
+    v: function(require, module, exports, global) {
+        "use strict";
+        var ObjectAnimation = boxspring.define("boxspring.animation.ObjectAnimation", {
+            inherits: boxspring.animation.ValueAnimation,
+            properties: {
+                target: {},
+                property: {}
+            },
+            progress: function(progress) {
+                PropertyAnimation.parent.progress.call(this, progress);
+                var target = this.target;
+                if (target == null) throw new Error("Missing target for object animator");
+                var property = this.property;
+                if (property == null) throw new Error("Missing property for object animator");
+                target.set(property, this.value);
             }
         });
     },
@@ -3617,14 +3630,14 @@
     },
     "10": function(require, module, exports, global) {
         "use strict";
-        var PropertyAnimation = boxspring.define("boxspring.view.animation.PropertyAnimation", {
-            inherits: boxspring.animation.ValueAnimator,
+        var ViewPropertyAnimation = boxspring.define("boxspring.view.ViewPropertyAnimation", {
+            inherits: boxspring.animation.ValueAnimation,
             properties: {
                 view: {},
                 property: {}
             },
             onPropertyChange: function(target, property, value) {
-                PropertyAnimation.parent.onPropertyChange.apply(this, arguments);
+                ViewPropertyAnimation.parent.onPropertyChange.apply(this, arguments);
                 if (property === "property" || property === "view" && value) {
                     var view = this.view;
                     if (view == null) return;
@@ -3635,6 +3648,9 @@
             },
             onStart: function(e) {
                 this.view.emit("propertyanimationstart", this.property, this.from);
+            },
+            onPause: function(e) {
+                this.view.emit("propertyanimationpause", this.property, this.from);
             },
             onUpdate: function(e) {
                 this.view.emit("propertyanimationupdate", this.property, this.value);
@@ -3648,64 +3664,37 @@
         "use strict";
         var AnimationRunner = boxspring.animation.AnimationRunner;
         var PropertyAnimation = boxspring.animation.PropertyAnimation;
-        var PropertyAnimationTransaction = boxspring.define("boxspring.view.animation.PropertyAnimationTransaction", {
+        var ViewPropertyAnimationGroup = boxspring.define("boxspring.view.ViewPropertyAnimationGroup", {
             inherits: boxspring.animation.AnimationGroup,
-            statics: {
-                setup: function(duration, equation) {
-                    transactionStatus = PropertyAnimationTransaction.STATUS_READING;
-                    var transaction = new PropertyAnimationTransaction;
-                    if (duration) transaction.duration = duration;
-                    if (equation) transaction.equation = equation;
-                    _.include(transactionStack, transaction);
-                    return this;
-                },
-                start: function() {
-                    transactionStatus = PropertyAnimationTransaction.STATUS_RUNNING;
-                    for (var i = 0; i < transactionStack.length; i++) {
-                        var transaction = transactionStack[i];
-                        if (transaction.running === false) {
-                            transaction.start();
-                        }
-                    }
-                },
-                animate: function(view, property, from, to) {
-                    var transaction = transactionStack[transactionStack.length - 1];
-                    if (transaction) {
-                        transaction.addAnimatedProperty(view, property, from, to);
-                    }
-                },
-                status: function() {
-                    return transactionStatus;
-                }
-            },
             constructor: function() {
-                PropertyAnimationTransaction.parent.constructor.call(this);
+                ViewPropertyAnimationGroup.parent.constructor.call(this);
+                _.include(instances, this);
                 this.__animatedViews = {};
                 this.__animatedItems = {};
                 this.__animatedProperties = {};
                 return this;
             },
             destroy: function() {
+                _.remove(instances, this);
                 this.__animatedViews = null;
                 this.__animatedItems = null;
                 this.__animatedProperties = null;
-                PropertyAnimationTransaction.parent.destroy.call(this);
+                ViewPropertyAnimationGroup.parent.destroy.call(this);
             },
-            run: function() {},
             addAnimatedProperty: function(view, property, from, to) {
                 this.__animatedViews[view.UID] = view;
                 var animations = this.__animatedProperties[property];
                 if (animations == null) {
                     animations = this.__animatedProperties[property] = {};
                 }
-                for (var i = 0; i < transactionStack.length; i++) {
-                    var transaction = transactionStack[i];
+                for (var i = 0; i < instances.length; i++) {
+                    var transaction = instances[i];
                     if (transaction === this) continue;
                     var animation = transaction.animationForViewProperty(view, property);
                     if (animation === null) continue;
                     transaction.removeAnimatedProperty(view, property);
                     animations[view.UID] = animation;
-                    if (animation.running) {
+                    if (transaction.running) {
                         animation.from = animation.value;
                         animation.end();
                     } else {
@@ -3716,7 +3705,7 @@
                 }
                 var animation = animations[view.UID];
                 if (animation == null) {
-                    animation = animations[view.UID] = new boxspring.view.animation.PropertyAnimation;
+                    animation = animations[view.UID] = new boxspring.view.ViewPropertyAnimation;
                     animation.property = property;
                     animation.view = view;
                     animation.from = from;
@@ -3750,47 +3739,51 @@
                 return animations[view.UID] || null;
             },
             onStart: function(e) {
-                PropertyAnimationTransaction.parent.onStart.apply(this, arguments);
+                ViewPropertyAnimationGroup.parent.onStart.apply(this, arguments);
                 _.invoke(this.__animatedViews, "emit", "animationstart");
             },
-            onPause: function(e) {},
+            onPause: function(e) {
+                ViewPropertyAnimationGroup.parent.onPause.apply(this, arguments);
+                _.invoke(this.__animatedViews, "emit", "animationpause");
+            },
             onEnd: function(e) {
-                PropertyAnimationTransaction.parent.onEnd.apply(this, arguments);
+                ViewPropertyAnimationGroup.parent.onEnd.apply(this, arguments);
                 _.invoke(this.__animatedViews, "emit", "animationend");
-                _.remove(transactionStack, e.source);
-                if (transactionStack.length === 0) {
-                    transactionStatus = PropertyAnimationTransaction.STATUS_NONE;
-                }
             },
             __animatedViews: null,
             __animatedItems: null,
             __animatedProperties: null
         });
-        PropertyAnimationTransaction.STATUS_NONE = 0;
-        PropertyAnimationTransaction.STATUS_READING = 1;
-        PropertyAnimationTransaction.STATUS_RUNNING = 1;
-        var transactionStatus = PropertyAnimationTransaction.STATUS_NONE;
-        var transactionStack = [];
+        var instances = [];
     },
     "12": function(require, module, exports, global) {
         "use strict";
-        var PropertyAnimationTransaction = boxspring.view.animation.PropertyAnimationTransaction;
+        var ViewPropertyAnimationGroup = boxspring.view.ViewPropertyAnimationGroup;
         var View = boxspring.define("boxspring.view.View", {
             inherits: boxspring.event.Emitter,
             statics: {
                 setupAnimation: function(duration, equation) {
+                    animating++;
                     if (layoutRoot) {
                         layoutRoot.layoutIfNeeded();
                     }
-                    PropertyAnimationTransaction.setup(duration, equation);
+                    var group = new ViewPropertyAnimationGroup;
+                    if (duration) group.duration = duration;
+                    if (equation) group.equation = equation;
+                    group.on("start", onViewPropertyAnimationGroupStart);
+                    group.on("end", onViewPropertyAnimationGroupEnd);
+                    _.include(animations, group);
                     return this;
                 },
                 startAnimation: function() {
                     if (layoutRoot) {
                         layoutRoot.layoutIfNeeded();
                     }
-                    PropertyAnimationTransaction.start();
-                    return this;
+                    for (var i = 0; i < animations.length; i++) {
+                        var group = animations[i];
+                        group.start();
+                    }
+                    animations = [];
                 }
             },
             properties: {
@@ -3830,11 +3823,11 @@
                 },
                 borderWidth: {
                     value: 0,
-                    check: Math.abs
+                    onSet: Math.abs
                 },
                 borderRadius: {
                     value: 0,
-                    check: Math.abs
+                    onSet: Math.abs
                 },
                 shadowBlur: {
                     value: 0
@@ -3862,7 +3855,7 @@
                 },
                 opacity: {
                     value: 1,
-                    check: function(value) {
+                    onSet: function(value) {
                         if (value > 1) value = 1;
                         if (value < 0) value = 0;
                         return value;
@@ -3872,7 +3865,7 @@
                     value: function() {
                         return new boxspring.geom.Thickness;
                     },
-                    check: function(newValue, oldValue) {
+                    onSet: function(newValue, oldValue) {
                         if (typeof newValue === "number") {
                             this.margin.top = newValue;
                             this.margin.left = newValue;
@@ -3887,7 +3880,7 @@
                     value: function() {
                         return new boxspring.geom.Thickness;
                     },
-                    check: function(newValue, oldValue) {
+                    onSet: function(newValue, oldValue) {
                         if (typeof newValue === "number") {
                             this.padding.top = newValue;
                             this.padding.left = newValue;
@@ -3902,7 +3895,7 @@
                     value: function() {
                         return new boxspring.geom.Position("auto");
                     },
-                    check: function(newValue, oldValue) {
+                    onSet: function(newValue, oldValue) {
                         if (newValue === "auto") {
                             this.position.top = newValue;
                             this.position.left = newValue;
@@ -3933,12 +3926,17 @@
                 },
                 measuredSize: {
                     value: function() {
-                        return new boxspring.geom.Size(-1, -1);
+                        return new boxspring.geom.Size("none", "none");
                     }
                 },
                 measuredOffset: {
                     value: function() {
-                        return new boxspring.geom.Point(-1, -1);
+                        return new boxspring.geom.Point("none", "none");
+                    }
+                },
+                animating: {
+                    onGet: function() {
+                        return animating > 0;
                     }
                 }
             },
@@ -4227,22 +4225,20 @@
                 return this;
             },
             onPropertyChange: function(target, property, newValue, oldValue, e) {
-                var PropertyAnimationTransaction = boxspring.view.animation.PropertyAnimationTransaction;
+                var ViewPropertyAnimationGroup = boxspring.view.ViewPropertyAnimationGroup;
                 if (this.reflowOnPropertyChange(property)) this.scheduleReflow();
                 if (this.layoutOnPropertyChange(property)) this.scheduleLayout();
                 if (layoutRoot === null) {
                     layoutRoot = this.window;
                 }
-                var status = PropertyAnimationTransaction.status();
-                if (status === PropertyAnimationTransaction.STATUS_READING || status === PropertyAnimationTransaction.STATUS_RUNNING) {
-                    if (this.propertyIsAnimatable(property)) {
-                        var t = newValue;
-                        var f = oldValue;
-                        if (property === "measuredSize.x" && this.__measuredSizeXSet === false || property === "measuredSize.y" && this.__measuredSizeYSet === false || property === "measuredOffset.x" && this.__measuredOffsetXSet === false || property === "measuredOffset.y" && this.__measuredOffsetYSet === false) {
-                            f = t;
-                        }
-                        PropertyAnimationTransaction.animate(this, property, f, t);
+                var viewPropertyAnimationGroup = animations[animations.length - 1];
+                if (viewPropertyAnimationGroup && this.propertyIsAnimatable(property)) {
+                    var t = newValue;
+                    var f = oldValue;
+                    if (property === "measuredSize.x" && this.__measuredSizeXSet === false || property === "measuredSize.y" && this.__measuredSizeYSet === false || property === "measuredOffset.x" && this.__measuredOffsetXSet === false || property === "measuredOffset.y" && this.__measuredOffsetYSet === false) {
+                        f = t;
                     }
+                    viewPropertyAnimationGroup.addAnimatedProperty(this, property, f, t);
                 }
                 if (property === "measuredSize.x") this.__measuredSizeXSet = true;
                 if (property === "measuredSize.y") this.__measuredSizeYSet = true;
@@ -4317,6 +4313,13 @@
         var scheduleLayoutProperties = [ "measuredSize.x", "measuredSize.y", "borderWidth", "padding.top", "padding.left", "padding.right", "padding.bottom", "layout" ];
         var animatableProperties = [ "backgroundColor", "borderColor", "shadowColor", "backgroundImage", "backgroundSize.x", "backgroundSize.y", "borderWidth", "borderRadius", "shadowBlur", "shadowOffset.x", "shadowOffset.y", "opacity", "measuredSize.x", "measuredSize.y", "measuredOffset.x", "measuredOffset.y" ];
         var layoutRoot = null;
+        var animations = [];
+        var animating = 0;
+        var onViewPropertyAnimationGroupStart = function(e) {};
+        var onViewPropertyAnimationGroupEnd = function(e) {
+            e.source.destroy();
+            animating--;
+        };
     },
     "13": function(require, module, exports, global) {
         "use strict";
@@ -4370,7 +4373,7 @@
             },
             onPropertyAnimationUpdate: function(property, value) {
                 View.parent.onPropertyAnimationUpdate.call(this, property, value);
-                updateDisplayWithMask(this, RENDER_UPDATE_MASK);
+                updateDisplayWithMask(this, ANIMATE_UPDATE_MASK);
             },
             __redrawBackground: function(context, area) {
                 var sizeX = this.measuredSize.x;
@@ -4395,7 +4398,7 @@
                         backgroundRadius = 0;
                     }
                     context.save();
-                    this.__createRectPath(context, 0, 0, backgroundSizeX, backgroundSizeY, backgroundRadius);
+                    createRectPath(context, 0, 0, backgroundSizeX, backgroundSizeY, backgroundRadius);
                     if (backgroundColor) {
                         context.fillStyle = backgroundColor;
                         context.fill();
@@ -4424,7 +4427,7 @@
                         strokeRadius = 0;
                     }
                     context.save();
-                    this.__createRectPath(context, strokeOriginX, strokeOriginY, strokeSizeX, strokeSizeY, strokeRadius);
+                    createRectPath(context, strokeOriginX, strokeOriginY, strokeSizeX, strokeSizeY, strokeRadius);
                     context.lineCap = "butt";
                     context.lineWidth = borderWidth;
                     context.strokeStyle = borderColor;
@@ -4433,47 +4436,45 @@
                 }
                 return this;
             },
-            __redrawShadow: function(context, area) {},
-            __createRectPath: function(context, originX, originY, sizeX, sizeY, radius) {
-                context.beginPath();
-                if (radius) {
-                    context.moveTo(originX + radius, originY);
-                    context.lineTo(originX + sizeX - radius, originY);
-                    context.quadraticCurveTo(originX + sizeX, originY, originX + sizeX, originY + radius);
-                    context.lineTo(originX + sizeX, originY + sizeY - radius);
-                    context.quadraticCurveTo(originX + sizeX, originY + sizeY, originX + sizeX - radius, originY + sizeY);
-                    context.lineTo(originX + radius, originY + sizeY);
-                    context.quadraticCurveTo(originX, originY + sizeY, originX, originY + sizeY - radius);
-                    context.lineTo(originX, originY + radius);
-                    context.quadraticCurveTo(originX, originY, originX + radius, originY);
-                } else {
-                    context.rect(originX, originY, sizeX, sizeY);
-                }
-                context.closePath();
-                return this;
-            }
+            __redrawShadow: function(context, area) {}
         });
         var scheduleRedrawProperties = [ "backgroundColor", "backgroundImage", "backgroundRepeat", "backgroundClip", "backgroundSize", "backgroundSize.x", "backgroundSize.y", "borderRadius", "borderColor", "borderWidth", "shadowBlur", "shadowColor", "shadowOffset", "shadowOffset.x", "shadowOffset.y" ];
         var RENDER_UPDATE_MASK = 1;
         var LAYOUT_UPDATE_MASK = 2;
         var REDRAW_UPDATE_MASK = 4;
         var REDRAW_SHADOW_UPDATE_MASK = 8;
+        var ANIMATE_UPDATE_MASK = 16;
         var renderCaches = {};
         var shadowCaches = {};
         var updateDisplayViews = {};
         var updateDisplayMasks = {};
+        var updateDisplayScheduled = false;
         var updateDisplayWithMask = function(view, mask) {
             if (updateDisplayMasks[view.UID] == null) {
                 updateDisplayMasks[view.UID] = 0;
             }
             updateDisplayViews[view.UID] = view;
             updateDisplayMasks[view.UID] |= mask;
-            boxspring.render.RenderLoop.run(updateDisplay, boxspring.render.RenderLoop.RENDER_PRIORITY);
+            if (view.animating) {
+                if (mask == ANIMATE_UPDATE_MASK) {
+                    if (updateDisplayScheduled === false) {
+                        updateDisplayScheduled = true;
+                        boxspring.render.RenderLoop.run(updateDisplay, boxspring.render.RenderLoop.RENDER_PRIORITY);
+                    }
+                }
+                return this;
+            }
+            if (updateDisplayScheduled === false) {
+                updateDisplayScheduled = true;
+                boxspring.render.RenderLoop.run(updateDisplay, boxspring.render.RenderLoop.RENDER_PRIORITY);
+            }
             return this;
         };
         var lastCalledTime;
         var fps;
         var updateDisplay = function() {
+            console.log(" --- Update Display --- ");
+            updateDisplayScheduled = false;
             var root = null;
             for (var key in updateDisplayViews) {
                 var view = updateDisplayViews[key];
@@ -4485,6 +4486,7 @@
                 if (root) break;
             }
             if (root == null) return;
+            console.log(" --- Rendering --- ");
             if (root.size.x === "auto") root.measuredSize.x = window.innerWidth;
             if (root.size.y === "auto") root.measuredSize.y = window.innerHeight;
             screenContext.clearRect(0, 0, screenCanvas.width, screenCanvas.height);
@@ -4545,6 +4547,24 @@
                 composite(children[i], screen);
             }
             screen.restore();
+        };
+        var createRectPath = function(context, originX, originY, sizeX, sizeY, radius) {
+            context.beginPath();
+            if (radius) {
+                context.moveTo(originX + radius, originY);
+                context.lineTo(originX + sizeX - radius, originY);
+                context.quadraticCurveTo(originX + sizeX, originY, originX + sizeX, originY + radius);
+                context.lineTo(originX + sizeX, originY + sizeY - radius);
+                context.quadraticCurveTo(originX + sizeX, originY + sizeY, originX + sizeX - radius, originY + sizeY);
+                context.lineTo(originX + radius, originY + sizeY);
+                context.quadraticCurveTo(originX, originY + sizeY, originX, originY + sizeY - radius);
+                context.lineTo(originX, originY + radius);
+                context.quadraticCurveTo(originX, originY, originX + radius, originY);
+            } else {
+                context.rect(originX, originY, sizeX, sizeY);
+            }
+            context.closePath();
+            return this;
         };
         var screenCanvas = null;
         var screenContext = null;

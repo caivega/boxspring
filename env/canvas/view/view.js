@@ -54,6 +54,7 @@ var View = boxspring.override('boxspring.view.View', {
 	 */
 	scheduleLayout: function() {
 		View.parent.scheduleLayout.call(this)
+		// called even if the view does not have a window
 		updateDisplayWithMask(this, LAYOUT_UPDATE_MASK)
 		return this
 	},
@@ -65,6 +66,7 @@ var View = boxspring.override('boxspring.view.View', {
      */
     scheduleRedraw: function(area) {
     	View.parent.scheduleRedraw.call(this, area)
+       	// called even if the view does not have a window
        	updateDisplayWithMask(this, REDRAW_UPDATE_MASK)
         return this
     },
@@ -125,7 +127,7 @@ var View = boxspring.override('boxspring.view.View', {
 	 */
 	onPropertyAnimationUpdate: function(property, value) {
        View.parent.onPropertyAnimationUpdate.call(this, property, value)
-       updateDisplayWithMask(this, RENDER_UPDATE_MASK)
+       updateDisplayWithMask(this, ANIMATE_UPDATE_MASK)
     },
 
 	//--------------------------------------------------------------------------
@@ -168,7 +170,7 @@ var View = boxspring.override('boxspring.view.View', {
 
 			context.save()
 
-			this.__createRectPath(context, 0, 0, backgroundSizeX, backgroundSizeY, backgroundRadius)
+			createRectPath(context, 0, 0, backgroundSizeX, backgroundSizeY, backgroundRadius)
 
 			if (backgroundColor) {
 				context.fillStyle = backgroundColor
@@ -214,7 +216,7 @@ var View = boxspring.override('boxspring.view.View', {
 
             context.save()
 
-            this.__createRectPath(context, strokeOriginX, strokeOriginY, strokeSizeX, strokeSizeY, strokeRadius)
+            createRectPath(context, strokeOriginX, strokeOriginY, strokeSizeX, strokeSizeY, strokeRadius)
 
             context.lineCap = 'butt'
             context.lineWidth = borderWidth
@@ -233,36 +235,7 @@ var View = boxspring.override('boxspring.view.View', {
 	 */
 	__redrawShadow: function(context, area) {
 		//console.log('TODO REDRAW SHADOW')
-	},
-
-	/**
-	 * Create a new rectangular path with a specified radius.
-	 * @method __createRectPath
-	 * @private
-	 */
-	__createRectPath: function(context, originX, originY, sizeX, sizeY, radius) {
-
-		context.beginPath()
-
-		if (radius) {
-			context.moveTo(originX + radius, originY)
-			context.lineTo(originX + sizeX - radius, originY)
-			context.quadraticCurveTo(originX + sizeX, originY, originX + sizeX, originY + radius)
-			context.lineTo(originX + sizeX, originY + sizeY - radius)
-			context.quadraticCurveTo(originX + sizeX, originY + sizeY, originX + sizeX - radius, originY + sizeY)
-			context.lineTo(originX + radius, originY + sizeY)
-			context.quadraticCurveTo(originX, originY + sizeY, originX, originY + sizeY - radius)
-			context.lineTo(originX, originY + radius)
-			context.quadraticCurveTo(originX, originY, originX + radius, originY)
-		} else {
-			context.rect(originX, originY, sizeX, sizeY)
-		}
-
-		context.closePath()
-
-		return this
 	}
-
 })
 
 /**
@@ -294,6 +267,7 @@ var RENDER_UPDATE_MASK = 1
 var LAYOUT_UPDATE_MASK = 2
 var REDRAW_UPDATE_MASK = 4
 var REDRAW_SHADOW_UPDATE_MASK = 8
+var ANIMATE_UPDATE_MASK = 16
 
 /**
  * Rendering caches.
@@ -308,6 +282,11 @@ var updateDisplayViews = {}
 var updateDisplayMasks = {}
 
 /**
+ * Whether an update display is scheduled.
+ */
+var updateDisplayScheduled = false
+
+/**
  * Schedule an update on the next rendering cycle.
  */
 var updateDisplayWithMask = function(view, mask) {
@@ -319,7 +298,20 @@ var updateDisplayWithMask = function(view, mask) {
 	updateDisplayViews[view.UID] = view
 	updateDisplayMasks[view.UID] |= mask
 
-	boxspring.render.RenderLoop.run(updateDisplay, boxspring.render.RenderLoop.RENDER_PRIORITY)
+	if (view.animating) {
+		if (mask == ANIMATE_UPDATE_MASK) {
+			if (updateDisplayScheduled === false) {
+				updateDisplayScheduled = true
+				boxspring.render.RenderLoop.run(updateDisplay, boxspring.render.RenderLoop.RENDER_PRIORITY)
+			}
+		}
+		return this
+	}
+
+	if (updateDisplayScheduled === false) {
+		updateDisplayScheduled = true
+		boxspring.render.RenderLoop.run(updateDisplay, boxspring.render.RenderLoop.RENDER_PRIORITY)
+	}
 
 	return this
 }
@@ -331,6 +323,10 @@ var fps;
  * Recompose the entire view hierarchy.
  */
 var updateDisplay = function() {
+
+	console.log(' --- Update Display --- ')
+
+	updateDisplayScheduled = false
 
 	var root = null
 
@@ -347,6 +343,8 @@ var updateDisplay = function() {
 	if (root == null)
 		return
 
+	console.log(' --- Rendering --- ')
+
     if (root.size.x === 'auto') root.measuredSize.x = window.innerWidth
     if (root.size.y === 'auto') root.measuredSize.y = window.innerHeight
 
@@ -356,30 +354,20 @@ var updateDisplay = function() {
     	screenCanvas.height
     )
 
-	// screenContext.save()
-	// screenContext.fillStyle = 'rgba(255, 255, 255, 0.0005)'
-	// screenContext.fillRect(0, 0,
- //     	screenCanvas.width,
- //     	screenCanvas.height
- //    )
- //    screenContext.restore()
-
     composite(root, screenContext)
 
     updateDisplayViews = {}
     updateDisplayMasks = {}
 
-	  if(!lastCalledTime) {
-	     lastCalledTime = new Date().getTime();
-	     fps = 0;
-	     return;
-	  }
-	  var delta = (new Date().getTime() - lastCalledTime)/1000;
-	  lastCalledTime = new Date().getTime();
-	  fps = 1/delta;
-
-	  screenContext.fillText(fps.toFixed(1) + "fps", 10, 10)
-
+	if (!lastCalledTime) {
+		lastCalledTime = new Date().getTime();
+		fps = 0;
+		return;
+	}
+	var delta = (new Date().getTime() - lastCalledTime)/1000;
+	lastCalledTime = new Date().getTime();
+	fps = 1/delta;
+	screenContext.fillText(fps.toFixed(1) + "fps", 10, 10)
 }
 
 /**
@@ -458,6 +446,33 @@ var composite = function(view, screen) {
     }
 
     screen.restore()
+}
+
+/**
+ * Create a new rectangular path with a specified radius.
+ * @private
+ */
+var createRectPath = function(context, originX, originY, sizeX, sizeY, radius) {
+
+	context.beginPath()
+
+	if (radius) {
+		context.moveTo(originX + radius, originY)
+		context.lineTo(originX + sizeX - radius, originY)
+		context.quadraticCurveTo(originX + sizeX, originY, originX + sizeX, originY + radius)
+		context.lineTo(originX + sizeX, originY + sizeY - radius)
+		context.quadraticCurveTo(originX + sizeX, originY + sizeY, originX + sizeX - radius, originY + sizeY)
+		context.lineTo(originX + radius, originY + sizeY)
+		context.quadraticCurveTo(originX, originY + sizeY, originX, originY + sizeY - radius)
+		context.lineTo(originX, originY + radius)
+		context.quadraticCurveTo(originX, originY, originX + radius, originY)
+	} else {
+		context.rect(originX, originY, sizeX, sizeY)
+	}
+
+	context.closePath()
+
+	return this
 }
 
 /**

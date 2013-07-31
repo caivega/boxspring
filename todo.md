@@ -1,6 +1,8 @@
 TODO
 ================================================================================
 
+- Think about naming layout content and Layout to somethingelse
+
 - ScheduleRedraw retoure dans la base background-url(:canvas)
 
 - put @private @static at the end
