@@ -19,34 +19,57 @@
 	<script type="text/javascript" src="../boxspring.js"></script>
 	<script type="text/javascript">
 
+		var View   = boxspring.view.View
+		var Window = boxspring.view.Window
+
+		var createView = function() {
+			var r = Math.round(Math.random() * 255)
+			var g = Math.round(Math.random() * 255)
+			var b = Math.round(Math.random() * 255)
+			var view = new View()
+			view.backgroundColor = 'rgba(' + r + ' ,' + g + ',' + b + ', 0.5)';
+			return view
+		}
+
+		var root = boxspring.view.Window.instance()
+		root.name = 'Window'
+		root.size.x = 'auto'
+		root.size.y = 'auto'
+
+		root.on('touchcancel', function() { console.log('Root Touch Cancel')})
+		root.on('touchstart', function() { console.log('Root Touch Start')})
+		root.on('touchmove', function() { console.log('Root Touch Move')})
+		root.on('touchend', function() { console.log('Root Touch Ens')})
+
+		var forwarder = new boxspring.event.TouchForwarder(root)
+
+		for (var i = 0; i < 5; i++) {
+			var view = createView()
+			view.name = 'View' + i
+			view.size.x = 'fill'
+			view.size.y = 'fill'
+			root.addChild(view)
+
+			;(function() {
 
 
-		var View             = boxspring.view.View
-		var Window           = boxspring.view.Window
+			var color = view.backgroundColor
+			view.on('touchstart', function() {
+				this.backgroundColor = 'red'
+			})
+			view.on('touchend', function() {
+				this.backgroundColor = color
+			})
 
-		var LinearLayout = boxspring.layout.LinearLayout
+			})()
+		}
 
-			var createView = function() {
-				var r = Math.round(Math.random() * 255)
-				var g = Math.round(Math.random() * 255)
-				var b = Math.round(Math.random() * 255)
-				var view = new View()
-				view.backgroundColor = 'rgba(' + r + ' ,' + g + ',' + b + ', 0.5)';
-				return view
-			}
-
-			var root = boxspring.view.Window.instance()
-			root.name = 'Window'
-			root.size.x = 'auto'
-			root.size.y = 'auto'
-
-			for (var i = 0; i < 5; i++) {
-				var view = createView()
-				view.name = 'View' + i
-				view.size.x = 'fill'
-				view.size.y = 'fill'
-				root.addChild(view)
-			}
+		// var view = createView()
+		// view.on('touchcancel', function() { console.log('Touch Cancel')})
+		// view.on('touchstart', function() { console.log('Touch Start')})
+		// view.on('touchmove', function() { console.log('Touch Move')})
+		// view.on('touchend', function() { console.log('Touch Ens')})
+		// root.addChild(view)
 
 			var animate = function() {
 
@@ -72,8 +95,8 @@
 
 			}
 
-			document.addEventListener('click', animate)
-			document.addEventListener('touchend', animate)
+			// document.addEventListener('click', animate)
+			// document.addEventListener('touchend', animate)
 
 			// var RenderLoop = boxspring.render.RenderLoop
 

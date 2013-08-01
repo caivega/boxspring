@@ -320,7 +320,7 @@ var fps;
  */
 var updateDisplay = function() {
 
-	console.log(' --- Update Display --- ')
+//	console.log(' --- Update Display --- ')
 
 	updateDisplayScheduled = false
 
@@ -339,7 +339,7 @@ var updateDisplay = function() {
 	if (root == null)
 		return
 
-	console.log(' --- Rendering --- ')
+	//console.log(' --- Rendering --- ')
 
     if (root.size.x === 'auto') root.measuredSize.x = window.innerWidth
     if (root.size.y === 'auto') root.measuredSize.y = window.innerHeight

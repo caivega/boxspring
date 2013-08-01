@@ -15,10 +15,10 @@
         require("1");
         require("9");
         require("g");
-        require("j");
-        require("l");
-        require("y");
+        require("z");
         require("11");
+        require("1e");
+        require("1h");
         module.exports = boxspring;
     },
     "1": function(require, module, exports, global) {
@@ -2671,6 +2671,12 @@
         "use strict";
         require("h");
         require("i");
+        require("j");
+        require("k");
+        require("l");
+        require("m");
+        require("n");
+        require("y");
     },
     h: function(require, module, exports, global) {
         "use strict";
@@ -2738,6 +2744,28 @@
         });
     },
     i: function(require, module, exports, global) {
+        "use strict";
+        var TouchEvent = boxspring.define("boxspring.event.TouchEvent", {
+            inherits: boxspring.event.Event,
+            properties: {
+                touches: {
+                    write: false
+                }
+            },
+            constructor: function(type, bubbles, touches) {
+                TouchEvent.parent.constructor.call(this, type, bubbles);
+                this.__touches = touches;
+                return this;
+            }
+        });
+    },
+    j: function(require, module, exports, global) {
+        "use strict";
+        var MouseEvent = boxspring.define("boxspring.event.MouseEvent", {
+            inherits: boxspring.event.Event
+        });
+    },
+    k: function(require, module, exports, global) {
         "use strict";
         var Emitter = boxspring.define("boxspring.event.Emitter", {
             properties: {
@@ -2854,11 +2882,429 @@
         });
         var slice = Array.prototype.slice;
     },
-    j: function(require, module, exports, global) {
+    l: function(require, module, exports, global) {
         "use strict";
-        require("k");
+        var Forwarder = boxspring.define("boxspring.event.Forwarder", {
+            properties: {
+                receiver: {}
+            },
+            constructor: function(receiver) {
+                Forwarder.parent.constructor.call(this);
+                this.receiver = receiver;
+                return this;
+            }
+        });
     },
-    k: function(require, module, exports, global) {
+    m: function(require, module, exports, global) {
+        "use strict";
+        var MouseForwarder = boxspring.define("boxspring.event.MouseForwarder", {
+            inherits: boxspring.event.Forwarder,
+            constructor: function(receiver) {
+                MouseForwarder.parent.constructor.call(this, receiver);
+                window.addEventListener("mousedown", this.bind("onMouseDown"));
+                window.addEventListener("mousemove", this.bind("onMouseMove"));
+                window.addEventListener("mouseup", this.bind("onMouseUp"));
+                window.addEventListener("click", this.bind("onClick"));
+                return this;
+            },
+            destroy: function() {
+                window.removeEventListener("mousedown", this.bind("onMouseDown"));
+                window.removeEventListener("mousemove", this.bind("onMouseMove"));
+                window.removeEventListener("mouseup", this.bind("onMouseUp"));
+                window.removeEventListener("click", this.bind("onClick"));
+                MouseForwarder.parent.destroy.call(this);
+            },
+            onMouseDown: function(e) {},
+            onMouseMove: function(e) {},
+            onMouseUp: function(e) {},
+            onClick: function(e) {}
+        });
+    },
+    n: function(require, module, exports, global) {
+        "use strict";
+        var Map = require("o");
+        var TouchForwarder = boxspring.define("boxspring.event.TouchForwarder", {
+            inherits: boxspring.event.Forwarder,
+            properties: {
+                touches: {
+                    value: {}
+                }
+            },
+            constructor: function(receiver) {
+                TouchForwarder.parent.constructor.call(this, receiver);
+                document.addEventListener("touchcancel", this.bind("onTouchCancel"));
+                document.addEventListener("touchstart", this.bind("onTouchStart"));
+                document.addEventListener("touchmove", this.bind("onTouchMove"));
+                document.addEventListener("touchend", this.bind("onTouchEnd"));
+                return this;
+            },
+            destroy: function() {
+                this.touches = null;
+                document.removeEventListener("touchcancel", this.bind("onTouchCancel"));
+                document.removeEventListener("touchstart", this.bind("onTouchStart"));
+                document.removeEventListener("touchmove", this.bind("onTouchMove"));
+                document.removeEventListener("touchend", this.bind("onTouchEnd"));
+                TouchForwarder.parent.destroy.call(this);
+            },
+            onTouchCancel: function(e) {
+                var targets = new Map;
+                _.each(e.changedTouches, function(t) {
+                    var touch = this.touches[t.identifier];
+                    if (touch === undefined) return;
+                    delete this.touches[t.identifier];
+                    var touches = targets.get(touch.target);
+                    if (touches === null) {
+                        targets.set(touch.target, touches = []);
+                    }
+                    touches.push(touch);
+                });
+                var all = _.clone(this.touches);
+                targets.forEach(function(touches, target) {
+                    target.emit(new boxspring.event.TouchEvent("touchcancel", true, all), touches);
+                }, this);
+            },
+            onTouchStart: function(e) {
+                var targets = new Map;
+                _.each(e.changedTouches, function(t) {
+                    var x = t.pageX;
+                    var y = t.pageY;
+                    var target = this.receiver.viewAtPoint(x, y);
+                    if (target) {
+                        var touch = new boxspring.event.Touch;
+                        touch.setLocation(x, y);
+                        touch.setTarget(target);
+                        this.touches[t.identifier] = touch;
+                        var touches = targets.get(target);
+                        if (touches === null) {
+                            targets.set(target, touches = []);
+                        }
+                        touches.push(touch);
+                    }
+                }, this);
+                var all = _.clone(this.touches);
+                targets.forEach(function(touches, target) {
+                    target.emit(new boxspring.event.TouchEvent("touchstart", true, all), touches);
+                });
+            },
+            onTouchMove: function(e) {
+                var targets = new Map;
+                _.each(e.changedTouches, function(t) {
+                    var touch = this.touches[t.identifier];
+                    if (touch === undefined) return;
+                    touch.setLocation(t.pageX, t.pageY);
+                    var touches = targets.get(touch.target);
+                    if (touches === null) {
+                        targets.set(touch.target, touches = []);
+                    }
+                    touches.push(touch);
+                }, this);
+                var all = _.clone(this.touches);
+                targets.forEach(function(touches, target) {
+                    target.emit(new boxspring.event.TouchEvent("touchmove", true, all), touches);
+                });
+            },
+            onTouchEnd: function(e) {
+                var targets = new Map;
+                _.each(e.changedTouches, function(t) {
+                    var touch = this.touches[t.identifier];
+                    if (touch === undefined) return;
+                    delete this.touches[t.identifier];
+                    var touches = targets.get(touch.target);
+                    if (touches === null) {
+                        targets.set(touch.target, touches = []);
+                    }
+                    touches.push(touch);
+                }, this);
+                var all = _.clone(this.touches);
+                targets.forEach(function(touches, target) {
+                    target.emit(new boxspring.event.TouchEvent("touchend", true, all), touches);
+                });
+            }
+        });
+    },
+    o: function(require, module, exports, global) {
+        "use strict";
+        var prime = require("p"), indexOf = require("x");
+        var Map = prime({
+            constructor: function Map() {
+                if (!this instanceof Map) return new Map;
+                this.length = 0;
+                this._values = [];
+                this._keys = [];
+            },
+            set: function(key, value) {
+                var index = indexOf(this._keys, key);
+                if (index === -1) {
+                    this._keys.push(key);
+                    this._values.push(value);
+                    this.length++;
+                } else {
+                    this._values[index] = value;
+                }
+                return this;
+            },
+            get: function(key) {
+                var index = indexOf(this._keys, key);
+                return index === -1 ? null : this._values[index];
+            },
+            count: function() {
+                return this.length;
+            },
+            forEach: function(method, context) {
+                for (var i = 0, l = this.length; i < l; i++) {
+                    if (method.call(context, this._values[i], this._keys[i], this) === false) break;
+                }
+                return this;
+            },
+            map: function(method, context) {
+                var results = new Map;
+                this.forEach(function(value, key) {
+                    results.set(key, method.call(context, value, key, this));
+                }, this);
+                return results;
+            },
+            filter: function(method, context) {
+                var results = new Map;
+                this.forEach(function(value, key) {
+                    if (method.call(context, value, key, this)) results.set(key, value);
+                }, this);
+                return results;
+            },
+            every: function(method, context) {
+                var every = true;
+                this.forEach(function(value, key) {
+                    if (!method.call(context, value, key, this)) return every = false;
+                }, this);
+                return every;
+            },
+            some: function(method, context) {
+                var some = false;
+                this.forEach(function(value, key) {
+                    if (method.call(context, value, key, this)) return !(some = true);
+                }, this);
+                return some;
+            },
+            indexOf: function(value) {
+                var index = indexOf(this._values, value);
+                return index > -1 ? this._keys[index] : null;
+            },
+            remove: function(value) {
+                var index = indexOf(this._values, value);
+                if (index !== -1) {
+                    this._values.splice(index, 1);
+                    this.length--;
+                    return this._keys.splice(index, 1)[0];
+                }
+                return null;
+            },
+            unset: function(key) {
+                var index = indexOf(this._keys, key);
+                if (index !== -1) {
+                    this._keys.splice(index, 1);
+                    this.length--;
+                    return this._values.splice(index, 1)[0];
+                }
+                return null;
+            },
+            keys: function() {
+                return this._keys.slice();
+            },
+            values: function() {
+                return this._values.slice();
+            }
+        });
+        module.exports = Map;
+    },
+    p: function(require, module, exports, global) {
+        "use strict";
+        var hasOwn = require("q"), forIn = require("r"), mixIn = require("s"), filter = require("u"), create = require("v"), type = require("w");
+        var defineProperty = Object.defineProperty, getOwnPropertyDescriptor = Object.getOwnPropertyDescriptor;
+        try {
+            defineProperty({}, "~", {});
+            getOwnPropertyDescriptor({}, "~");
+        } catch (e) {
+            defineProperty = null;
+            getOwnPropertyDescriptor = null;
+        }
+        var define = function(value, key, from) {
+            defineProperty(this, key, getOwnPropertyDescriptor(from, key) || {
+                writable: true,
+                enumerable: true,
+                configurable: true,
+                value: value
+            });
+        };
+        var copy = function(value, key) {
+            this[key] = value;
+        };
+        var implement = function(proto) {
+            forIn(proto, defineProperty ? define : copy, this.prototype);
+            return this;
+        };
+        var verbs = /^constructor|inherits|mixin$/;
+        var prime = function(proto) {
+            if (type(proto) === "function") proto = {
+                constructor: proto
+            };
+            var superprime = proto.inherits;
+            var constructor = hasOwn(proto, "constructor") ? proto.constructor : superprime ? function() {
+                return superprime.apply(this, arguments);
+            } : function() {};
+            if (superprime) {
+                mixIn(constructor, superprime);
+                var superproto = superprime.prototype;
+                var cproto = constructor.prototype = create(superproto);
+                constructor.parent = superproto;
+                cproto.constructor = constructor;
+            }
+            if (!constructor.implement) constructor.implement = implement;
+            var mixins = proto.mixin;
+            if (mixins) {
+                if (type(mixins) !== "array") mixins = [ mixins ];
+                for (var i = 0; i < mixins.length; i++) constructor.implement(create(mixins[i].prototype));
+            }
+            return constructor.implement(filter(proto, function(value, key) {
+                return !key.match(verbs);
+            }));
+        };
+        module.exports = prime;
+    },
+    q: function(require, module, exports, global) {
+        "use strict";
+        var hasOwnProperty = Object.hasOwnProperty;
+        var hasOwn = function(self, key) {
+            return hasOwnProperty.call(self, key);
+        };
+        module.exports = hasOwn;
+    },
+    r: function(require, module, exports, global) {
+        "use strict";
+        var has = require("q");
+        var forIn = function(self, method, context) {
+            for (var key in self) if (method.call(context, self[key], key, self) === false) break;
+            return self;
+        };
+        if (!{
+            valueOf: 0
+        }.propertyIsEnumerable("valueOf")) {
+            var buggy = "constructor,toString,valueOf,hasOwnProperty,isPrototypeOf,propertyIsEnumerable,toLocaleString".split(",");
+            var proto = Object.prototype;
+            forIn = function(self, method, context) {
+                for (var key in self) if (method.call(context, self[key], key, self) === false) return self;
+                for (var i = 0; key = buggy[i]; i++) {
+                    var value = self[key];
+                    if ((value !== proto[key] || has(self, key)) && method.call(context, value, key, self) === false) break;
+                }
+                return self;
+            };
+        }
+        module.exports = forIn;
+    },
+    s: function(require, module, exports, global) {
+        "use strict";
+        var forOwn = require("t");
+        var copy = function(value, key) {
+            this[key] = value;
+        };
+        var mixIn = function(self) {
+            for (var i = 1, l = arguments.length; i < l; i++) forOwn(arguments[i], copy, self);
+            return self;
+        };
+        module.exports = mixIn;
+    },
+    t: function(require, module, exports, global) {
+        "use strict";
+        var forIn = require("r"), hasOwn = require("q");
+        var forOwn = function(self, method, context) {
+            forIn(self, function(value, key) {
+                if (hasOwn(self, key)) return method.call(context, value, key, self);
+            });
+            return self;
+        };
+        module.exports = forOwn;
+    },
+    u: function(require, module, exports, global) {
+        "use strict";
+        var forIn = require("r");
+        var filter = function(self, method, context) {
+            var results = {};
+            forIn(self, function(value, key) {
+                if (method.call(context, value, key, self)) results[key] = value;
+            });
+            return results;
+        };
+        module.exports = filter;
+    },
+    v: function(require, module, exports, global) {
+        "use strict";
+        var create = function(self) {
+            var constructor = function() {};
+            constructor.prototype = self;
+            return new constructor;
+        };
+        module.exports = create;
+    },
+    w: function(require, module, exports, global) {
+        "use strict";
+        var toString = Object.prototype.toString, types = /number|object|array|string|function|date|regexp|boolean/;
+        var type = function(object) {
+            if (object == null) return "null";
+            var string = toString.call(object).slice(8, -1).toLowerCase();
+            if (string === "number" && isNaN(object)) return "null";
+            if (types.test(string)) return string;
+            return "object";
+        };
+        module.exports = type;
+    },
+    x: function(require, module, exports, global) {
+        "use strict";
+        var indexOf = function(self, item, from) {
+            for (var l = self.length >>> 0, i = from < 0 ? Math.max(0, l + from) : from || 0; i < l; i++) {
+                if (self[i] === item) return i;
+            }
+            return -1;
+        };
+        module.exports = indexOf;
+    },
+    y: function(require, module, exports, global) {
+        "use strict";
+        var Touch = boxspring.define("boxspring.event.Touch", {
+            properties: {
+                identifier: {
+                    write: false
+                },
+                target: {
+                    write: false
+                },
+                location: {
+                    write: false,
+                    value: function() {
+                        return new boxspring.geom.Point(0, 0);
+                    }
+                }
+            },
+            constructor: function() {
+                Touch.parent.constructor.call(this);
+                this.__identifier = (UID++).toString(36);
+                return this;
+            },
+            setTarget: function(target) {
+                this.__target = target;
+                return this;
+            },
+            setLocation: function(x, y) {
+                this.__location.x = x;
+                this.__location.y = y;
+                return this;
+            }
+        });
+        var UID = Date.now();
+    },
+    z: function(require, module, exports, global) {
+        "use strict";
+        require("10");
+    },
+    "10": function(require, module, exports, global) {
         "use strict";
         var RenderLoop = boxspring.define("boxspring.render.RenderLoop", {
             statics: {
@@ -2962,27 +3408,27 @@
         var cancelFrame = webkitCancelAnimationFrame;
         var requestFrame = webkitRequestAnimationFrame;
     },
-    l: function(require, module, exports, global) {
+    "11": function(require, module, exports, global) {
         "use strict";
-        require("m");
-        require("n");
-        require("o");
-        require("p");
-        require("q");
-        require("r");
-        require("t");
-        require("u");
-        require("v");
-        require("w");
-        require("x");
+        require("12");
+        require("13");
+        require("14");
+        require("15");
+        require("16");
+        require("17");
+        require("19");
+        require("1a");
+        require("1b");
+        require("1c");
+        require("1d");
     },
-    m: function(require, module, exports, global) {
+    "12": function(require, module, exports, global) {
         "use strict";
         var TypeEvaluator = boxspring.define("boxspring.animation.TypeEvaluator", {
             evaluate: function(progress, from, to) {}
         });
     },
-    n: function(require, module, exports, global) {
+    "13": function(require, module, exports, global) {
         "use strict";
         var ColorEvaluator = boxspring.define("boxspring.animation.ColorEvaluator", {
             inherit: boxspring.animation.TypeEvaluator,
@@ -2991,7 +3437,7 @@
             }
         });
     },
-    o: function(require, module, exports, global) {
+    "14": function(require, module, exports, global) {
         "use strict";
         var ImageEvaluator = boxspring.define("boxspring.animation.ImageEvaluator", {
             inherit: boxspring.animation.TypeEvaluator,
@@ -3000,7 +3446,7 @@
             }
         });
     },
-    p: function(require, module, exports, global) {
+    "15": function(require, module, exports, global) {
         "use strict";
         var NumberEvaluator = boxspring.define("boxspring.animation.NumberEvaluator", {
             inherit: boxspring.animation.TypeEvaluator,
@@ -3009,7 +3455,7 @@
             }
         });
     },
-    q: function(require, module, exports, global) {
+    "16": function(require, module, exports, global) {
         "use strict";
         var AnimationRunner = boxspring.define("boxspring.animation.AnimationRunner", {
             statics: {
@@ -3054,9 +3500,9 @@
             if (animations.length === 0) stop();
         };
     },
-    r: function(require, module, exports, global) {
+    "17": function(require, module, exports, global) {
         "use strict";
-        var bezier = require("s");
+        var bezier = require("18");
         var Animation = boxspring.define("boxspring.animation.Animation", {
             inherits: boxspring.event.Emitter,
             properties: {
@@ -3199,7 +3645,7 @@
             return bezier(+equation[1], +equation[2], +equation[3], +equation[4], 1e3 / 60 / duration / 4);
         };
     },
-    s: function(require, module, exports, global) {
+    "18": function(require, module, exports, global) {
         module.exports = function(x1, y1, x2, y2, epsilon) {
             var curveX = function(t) {
                 var v = 1 - t;
@@ -3235,7 +3681,7 @@
             };
         };
     },
-    t: function(require, module, exports, global) {
+    "19": function(require, module, exports, global) {
         "use strict";
         var AnimationRunner = boxspring.animation.AnimationRunner;
         var AnimationGroup = boxspring.define("boxspring.animation.AnimationGroup", {
@@ -3277,7 +3723,7 @@
             }
         });
     },
-    u: function(require, module, exports, global) {
+    "1a": function(require, module, exports, global) {
         "use strict";
         var AnimationRunner = boxspring.animation.AnimationRunner;
         var ValueAnimation = boxspring.define("boxspring.animation.ValueAnimation", {
@@ -3309,7 +3755,7 @@
             onUpdate: function(value) {}
         });
     },
-    v: function(require, module, exports, global) {
+    "1b": function(require, module, exports, global) {
         "use strict";
         var ObjectAnimation = boxspring.define("boxspring.animation.ObjectAnimation", {
             inherits: boxspring.animation.ValueAnimation,
@@ -3327,7 +3773,7 @@
             }
         });
     },
-    w: function(require, module, exports, global) {
+    "1c": function(require, module, exports, global) {
         "use strict";
         var ViewPropertyAnimation = boxspring.define("boxspring.animation.ViewPropertyAnimation", {
             inherits: boxspring.animation.ValueAnimation,
@@ -3359,7 +3805,7 @@
             }
         });
     },
-    x: function(require, module, exports, global) {
+    "1d": function(require, module, exports, global) {
         "use strict";
         var AnimationRunner = boxspring.animation.AnimationRunner;
         var PropertyAnimation = boxspring.animation.PropertyAnimation;
@@ -3455,12 +3901,12 @@
         });
         var instances = [];
     },
-    y: function(require, module, exports, global) {
+    "1e": function(require, module, exports, global) {
         "use strict";
-        require("z");
-        require("10");
+        require("1f");
+        require("1g");
     },
-    z: function(require, module, exports, global) {
+    "1f": function(require, module, exports, global) {
         "use strict";
         var Layout = boxspring.define("boxspring.layout.Layout", {
             properties: {
@@ -3531,7 +3977,7 @@
             updateLayout: function(children) {}
         });
     },
-    "10": function(require, module, exports, global) {
+    "1g": function(require, module, exports, global) {
         "use strict";
         var LinearLayout = boxspring.define("boxspring.layout.LinearLayout", {
             inherits: boxspring.layout.Layout,
@@ -3795,14 +4241,14 @@
             }
         });
     },
-    "11": function(require, module, exports, global) {
+    "1h": function(require, module, exports, global) {
         "use strict";
-        require("12");
-        require("13");
-        require("14");
-        require("15");
+        require("1i");
+        require("1j");
+        require("1k");
+        require("1l");
     },
-    "12": function(require, module, exports, global) {
+    "1i": function(require, module, exports, global) {
         "use strict";
         var View = boxspring.define("boxspring.view.View", {
             inherits: boxspring.event.Emitter,
@@ -4133,27 +4579,26 @@
             childAt: function(index) {
                 return this.__children[index] || null;
             },
-            childAtPoint: function(x, y) {
+            viewAtPoint: function(x, y) {
                 if (this.pointInside(x, y) === false) return null;
+                var o = this.measuredOffset;
+                var px = x - o.x;
+                var py = y - o.y;
                 var children = this.__children;
                 for (var i = children.length - 1; i >= 0; i--) {
                     var child = children[i];
-                    if (child.pointInside(x, y) === false) continue;
-                    var o = child.origin;
-                    var px = x - o.x;
-                    var py = y - o.y;
-                    return child.childAtPoint(px, py);
+                    if (child.pointInside(px, py)) return child.viewAtPoint(px, py);
                 }
                 return this;
             },
             pointInside: function(x, y) {
                 var point = arguments[0];
-                if (point instanceof Point) {
+                if (point instanceof boxspring.geom.Point) {
                     x = point.x;
                     y = point.y;
                 }
-                var s = this.size;
-                var o = this.origin;
+                var s = this.measuredSize;
+                var o = this.measuredOffset;
                 return x >= o.x && x <= o.x + s.x && y >= o.y && y <= o.y + s.y;
             },
             animate: function(property, value, duration, equation) {
@@ -4370,7 +4815,7 @@
             e.source.destroy();
         };
     },
-    "13": function(require, module, exports, global) {
+    "1j": function(require, module, exports, global) {
         "use strict";
         var View = boxspring.override("boxspring.view.View", {
             destroy: function() {
@@ -4513,7 +4958,6 @@
         var lastCalledTime;
         var fps;
         var updateDisplay = function() {
-            console.log(" --- Update Display --- ");
             updateDisplayScheduled = false;
             var root = null;
             for (var key in updateDisplayViews) {
@@ -4526,7 +4970,6 @@
                 if (root) break;
             }
             if (root == null) return;
-            console.log(" --- Rendering --- ");
             if (root.size.x === "auto") root.measuredSize.x = window.innerWidth;
             if (root.size.y === "auto") root.measuredSize.y = window.innerHeight;
             screenContext.clearRect(0, 0, screenCanvas.width, screenCanvas.height);
@@ -4620,7 +5063,7 @@
             });
         });
     },
-    "14": function(require, module, exports, global) {
+    "1k": function(require, module, exports, global) {
         "use strict";
         var Window = boxspring.define("boxspring.view.Window", {
             inherits: boxspring.view.View,
@@ -4649,7 +5092,7 @@
         });
         var instance = null;
     },
-    "15": function(require, module, exports, global) {
+    "1l": function(require, module, exports, global) {
         "use strict";
         var Window = boxspring.override("boxspring.view.Window", {
             constructor: function() {
