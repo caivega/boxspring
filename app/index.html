@@ -43,7 +43,7 @@
 
 		var forwarder = new boxspring.event.TouchForwarder(root)
 
-		for (var i = 0; i < 2; i++) {
+		for (var i = 0; i < 20; i++) {
 			var view = createView()
 			view.name = 'View' + i
 			view.size.x = 'fill'
@@ -65,14 +65,12 @@
 				root.contentLayout.orientation = root.contentLayout.orientation === 'horizontal' ? 'vertical' : 'horizontal'
 				View.startAnimation()
 
-				View.setupAnimation(1200)
-				root.contentLayout.orientation = root.contentLayout.orientation === 'horizontal' ? 'vertical' : 'horizontal'
-				View.startAnimation()
+
 
 			}
 
-			document.addEventListener('click', animate)
-			//document.addEventListener('touchend', animate)
+			///document.addEventListener('click', animate)
+			document.addEventListener('touchend', animate)
 
 			// var RenderLoop = boxspring.render.RenderLoop
 

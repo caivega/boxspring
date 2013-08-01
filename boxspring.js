@@ -4736,20 +4736,15 @@
                 if (layoutRoot === null) {
                     layoutRoot = this.window;
                 }
-                var viewPropertyAnimationGroup = animations[animations.length - 1];
-                if (viewPropertyAnimationGroup && this.propertyIsAnimatable(property)) {
+                var animation = animations[animations.length - 1];
+                if (animation && this.propertyIsAnimatable(property)) {
                     var t = newValue;
                     var f = oldValue;
-                    console.log("Animating " + property + " from " + oldValue + " to " + newValue);
-                    if (property === "measuredSize.x" && this.__measuredSizeXSet === false || property === "measuredSize.y" && this.__measuredSizeYSet === false || property === "measuredOffset.x" && this.__measuredOffsetXSet === false || property === "measuredOffset.y" && this.__measuredOffsetYSet === false) {
+                    if (property === "measuredSize.x" && oldValue === "none" || property === "measuredSize.y" && oldValue === "none" || property === "measuredOffset.x" && oldValue === "none" || property === "measuredOffset.y" && oldValue === "none") {
                         f = t;
                     }
-                    viewPropertyAnimationGroup.addAnimatedProperty(this, property, f, t);
+                    animation.addAnimatedProperty(this, property, f, t);
                 }
-                if (property === "measuredSize.x") this.__measuredSizeXSet = true;
-                if (property === "measuredSize.y") this.__measuredSizeYSet = true;
-                if (property === "measuredOffset.x") this.__measuredOffsetXSet = true;
-                if (property === "measuredOffset.y") this.__measuredOffsetYSet = true;
             },
             onRedraw: function(e) {},
             onLayout: function(e) {},
@@ -4808,10 +4803,6 @@
             },
             __redrawScheduled: false,
             __layoutScheduled: false,
-            __measuredSizeXSet: false,
-            __measuredSizeYSet: false,
-            __measuredOffsetXSet: false,
-            __measuredOffsetYSet: false,
             __animatedPropertyValues: null
         });
         var scheduleReflowProperties = [ "size.x", "size.y", "minSize.x", "minSize.y", "maxSize.x", "maxSize.y", "visible", "margin.top", "margin.left", "margin.right", "margin.bottom", "position.top", "position.left", "position.right", "position.bottom" ];
