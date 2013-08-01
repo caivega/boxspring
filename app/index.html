@@ -50,6 +50,7 @@
 
 			var animate = function() {
 
+				/*
 				var view = createView()
 				view.size.y = 0
 				view.opacity = 0
@@ -64,6 +65,11 @@
 				// View.setupAnimation(1000)
 				// root.layout.orientation = root.layout.orientation === 'horizontal' ? 'vertical' : 'horizontal';
 				// View.startAnimation()
+				*/
+
+				var view = createView()
+				root.addChildAt(view, 0)
+
 			}
 
 			document.addEventListener('click', animate)

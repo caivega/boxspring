@@ -50,7 +50,6 @@ var View = boxspring.override('boxspring.view.View', {
 	 */
 	scheduleLayout: function() {
 		View.parent.scheduleLayout.call(this)
-		// called even if the view does not have a window
 		updateDisplayWithMask(this, LAYOUT_UPDATE_MASK)
 		return this
 	},
@@ -61,7 +60,6 @@ var View = boxspring.override('boxspring.view.View', {
      */
     scheduleRedraw: function(area) {
     	View.parent.scheduleRedraw.call(this, area)
-       	// called even if the view does not have a window
        	updateDisplayWithMask(this, REDRAW_UPDATE_MASK)
         return this
     },
@@ -104,10 +102,6 @@ var View = boxspring.override('boxspring.view.View', {
 			property === 'opacity' ||
 			property === 'transform') {
 			updateDisplayWithMask(this, RENDER_UPDATE_MASK)
-		}
-
-		if (this.redrawOnPropertyChange(property)) {
-			this.scheduleRedraw()
 		}
 
 		View.parent.onPropertyChange.call(this, target, property, newValue, oldValue, e)
@@ -304,22 +298,16 @@ var updateDisplayWithMask = function(view, mask) {
 	updateDisplayViews[view.UID] = view
 	updateDisplayMasks[view.UID] |= mask
 
-	if (view.animating) {
-		if (mask == ANIMATE_UPDATE_MASK) {
-			if (updateDisplayScheduled === false) {
-				updateDisplayScheduled = true
-				boxspring.render.RenderLoop.run(updateDisplay, boxspring.render.RenderLoop.RENDER_PRIORITY)
-			}
-		}
-		return this
+	var status = View.animationStatus()
+	if (status === 'reading' ||
+		status === 'running') {
+		if (mask !== ANIMATE_UPDATE_MASK) return
 	}
 
-	if (updateDisplayScheduled === false) {
+	if (updateDisplayScheduled === false && (view.window || view instanceof boxspring.view.Window)) {
 		updateDisplayScheduled = true
 		boxspring.render.RenderLoop.run(updateDisplay, boxspring.render.RenderLoop.RENDER_PRIORITY)
 	}
-
-	return this
 }
 
 var lastCalledTime;
@@ -400,7 +388,7 @@ var composite = function(view, screen) {
 		cache = renderCaches[view.UID] = document.createElement('canvas')
 		cache.width  = Math.floor(view.measuredSize.x)
 		cache.height = Math.floor(view.measuredSize.y)
-	} else if (cache.width  !== Math.floor(view.measuredSize.x) || cache.height !== Math.floor(view.measuredSize.y)) {
+	} else if (cache.width !== Math.floor(view.measuredSize.x) || cache.height !== Math.floor(view.measuredSize.y)) {
 		cache.width  = view.measuredSize.x
 		cache.height = view.measuredSize.y
 		mask |= REDRAW_UPDATE_MASK
@@ -506,13 +494,16 @@ var screenContext = null
  * @since 0.9
  */
 document.addEventListener("DOMContentLoaded", function(event) {
+
 	screenCanvas = document.createElement('canvas')
 	screenCanvas.width = window.innerWidth
 	screenCanvas.height = window.innerHeight
 	document.body.appendChild(screenCanvas)
+
 	screenContext = screenCanvas.getContext('2d')
+
 	window.addEventListener('resize', function() {
 	    screenCanvas.width = window.innerWidth
 	    screenCanvas.height = window.innerHeight
 	})
-});
+})

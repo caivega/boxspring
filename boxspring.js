@@ -3804,32 +3804,34 @@
     },
     "12": function(require, module, exports, global) {
         "use strict";
-        var ViewPropertyTransaction = boxspring.animation.ViewPropertyTransaction;
         var View = boxspring.define("boxspring.view.View", {
             inherits: boxspring.event.Emitter,
             statics: {
                 setupAnimation: function(duration, equation) {
-                    animating++;
+                    if (animationStatus == null) {
+                        animationStatus = "reading";
+                    }
                     if (layoutRoot) {
                         layoutRoot.layoutIfNeeded();
                     }
-                    var group = new ViewPropertyTransaction;
+                    var group = new boxspring.animation.ViewPropertyTransaction;
                     if (duration) group.duration = duration;
                     if (equation) group.equation = equation;
                     group.on("start", onViewPropertyTransactionStart);
                     group.on("end", onViewPropertyTransactionEnd);
                     _.include(animations, group);
-                    return this;
                 },
                 startAnimation: function() {
                     if (layoutRoot) {
                         layoutRoot.layoutIfNeeded();
                     }
                     for (var i = 0; i < animations.length; i++) {
-                        var group = animations[i];
-                        group.start();
+                        animations[i].start();
                     }
                     animations = [];
+                },
+                animationStatus: function() {
+                    return animationStatus;
                 }
             },
             properties: {
@@ -3979,11 +3981,6 @@
                     value: function() {
                         return new boxspring.geom.Point("none", "none");
                     }
-                },
-                animating: {
-                    onGet: function() {
-                        return animating > 0;
-                    }
                 }
             },
             constructor: function() {
@@ -4089,7 +4086,7 @@
                 } else if (index < 0) {
                     index = 0;
                 }
-                children.splice(index, 1, view);
+                children.splice(index, 0, view);
                 view.setWindow(this.window);
                 view.setParent(this);
                 view.setParentReceiver(this);
@@ -4272,6 +4269,7 @@
             },
             onPropertyChange: function(target, property, newValue, oldValue, e) {
                 var ViewPropertyTransaction = boxspring.animation.ViewPropertyTransaction;
+                if (this.redrawOnPropertyChange(property)) this.scheduleRedraw();
                 if (this.reflowOnPropertyChange(property)) this.scheduleReflow();
                 if (this.layoutOnPropertyChange(property)) this.scheduleLayout();
                 if (layoutRoot === null) {
@@ -4360,11 +4358,16 @@
         var animatableProperties = [ "backgroundColor", "borderColor", "shadowColor", "backgroundImage", "backgroundSize.x", "backgroundSize.y", "borderWidth", "borderRadius", "shadowBlur", "shadowOffset.x", "shadowOffset.y", "opacity", "measuredSize.x", "measuredSize.y", "measuredOffset.x", "measuredOffset.y" ];
         var layoutRoot = null;
         var animations = [];
-        var animating = 0;
-        var onViewPropertyTransactionStart = function(e) {};
+        var animationStatus = null;
+        var animationCount = 0;
+        var onViewPropertyTransactionStart = function(e) {
+            animationCount++;
+            animationStatus = "running";
+        };
         var onViewPropertyTransactionEnd = function(e) {
+            animationCount--;
+            animationStatus = animationCount === 0 && animationStatus !== "reading" ? null : "reading";
             e.source.destroy();
-            animating--;
         };
     },
     "13": function(require, module, exports, global) {
@@ -4411,9 +4414,6 @@
                 }
                 if (property === "measuredSize" || property === "measuredSize.x" || property === "measuredSize.y" || property === "measuredOffset" || property === "measuredOffset.x" || property === "measuredOffset.y" || property === "opacity" || property === "transform") {
                     updateDisplayWithMask(this, RENDER_UPDATE_MASK);
-                }
-                if (this.redrawOnPropertyChange(property)) {
-                    this.scheduleRedraw();
                 }
                 View.parent.onPropertyChange.call(this, target, property, newValue, oldValue, e);
             },
@@ -4501,20 +4501,14 @@
             }
             updateDisplayViews[view.UID] = view;
             updateDisplayMasks[view.UID] |= mask;
-            if (view.animating) {
-                if (mask == ANIMATE_UPDATE_MASK) {
-                    if (updateDisplayScheduled === false) {
-                        updateDisplayScheduled = true;
-                        boxspring.render.RenderLoop.run(updateDisplay, boxspring.render.RenderLoop.RENDER_PRIORITY);
-                    }
-                }
-                return this;
+            var status = View.animationStatus();
+            if (status === "reading" || status === "running") {
+                if (mask !== ANIMATE_UPDATE_MASK) return;
             }
-            if (updateDisplayScheduled === false) {
+            if (updateDisplayScheduled === false && (view.window || view instanceof boxspring.view.Window)) {
                 updateDisplayScheduled = true;
                 boxspring.render.RenderLoop.run(updateDisplay, boxspring.render.RenderLoop.RENDER_PRIORITY);
             }
-            return this;
         };
         var lastCalledTime;
         var fps;
