@@ -43,25 +43,12 @@
 
 		var forwarder = new boxspring.event.TouchForwarder(root)
 
-		for (var i = 0; i < 5; i++) {
+		for (var i = 0; i < 2; i++) {
 			var view = createView()
 			view.name = 'View' + i
 			view.size.x = 'fill'
 			view.size.y = 'fill'
 			root.addChild(view)
-
-			;(function() {
-
-
-			var color = view.backgroundColor
-			view.on('touchstart', function() {
-				this.backgroundColor = 'red'
-			})
-			view.on('touchend', function() {
-				this.backgroundColor = color
-			})
-
-			})()
 		}
 
 		// var view = createView()
@@ -73,30 +60,19 @@
 
 			var animate = function() {
 
-				/*
-				var view = createView()
-				view.size.y = 0
-				view.opacity = 0
-				root.addChild(view)
 
 				View.setupAnimation(1200)
-				view.size.y = 'fill'
-				view.opacity = 1
-				 //root.layout.orientation = root.layout.orientation === 'horizontal' ? 'vertical' : 'horizontal'
-				 View.startAnimation()
+				root.contentLayout.orientation = root.contentLayout.orientation === 'horizontal' ? 'vertical' : 'horizontal'
+				View.startAnimation()
 
-				// View.setupAnimation(1000)
-				// root.layout.orientation = root.layout.orientation === 'horizontal' ? 'vertical' : 'horizontal';
-				// View.startAnimation()
-				*/
-
-				var view = createView()
-				root.addChildAt(view, 0)
+				View.setupAnimation(1200)
+				root.contentLayout.orientation = root.contentLayout.orientation === 'horizontal' ? 'vertical' : 'horizontal'
+				View.startAnimation()
 
 			}
 
-			// document.addEventListener('click', animate)
-			// document.addEventListener('touchend', animate)
+			document.addEventListener('click', animate)
+			//document.addEventListener('touchend', animate)
 
 			// var RenderLoop = boxspring.render.RenderLoop
 

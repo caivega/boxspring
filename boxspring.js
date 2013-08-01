@@ -18,7 +18,7 @@
         require("z");
         require("11");
         require("1e");
-        require("1h");
+        require("1i");
         module.exports = boxspring;
     },
     "1": function(require, module, exports, global) {
@@ -2002,8 +2002,12 @@
                 Object.defineProperty(prototype, key, {
                     get: function() {
                         setup.call(this);
-                        var v = onGet.call(this, this[name]);
-                        return clone ? _.clone(v) : v;
+                        var curValue = this[name];
+                        var retValue = onGet.call(this, curValue);
+                        if (retValue === undefined) {
+                            retValue = curValue;
+                        }
+                        return clone ? _.clone(retValue) : retValue;
                     },
                     set: function(value) {
                         if (write === "once") {
@@ -2018,7 +2022,9 @@
                         setup.call(this);
                         var oldValue = this[name];
                         var newValue = onSet.call(this, value, oldValue);
-                        if (newValue === undefined) newValue = value;
+                        if (newValue === undefined) {
+                            newValue = oldValue;
+                        }
                         if (newValue === oldValue) return;
                         this[name] = newValue;
                         if (this.notifyPropertyChangeListeners) {
@@ -3840,7 +3846,7 @@
                     transaction.removeAnimatedProperty(view, property);
                     animations[view.UID] = animation;
                     if (transaction.running) {
-                        animation.from = animation.value;
+                        animation.from = animation.value === null ? animation.from : animation.value;
                         animation.end();
                     } else {
                         animation.from = from;
@@ -3905,52 +3911,70 @@
         "use strict";
         require("1f");
         require("1g");
+        require("1h");
     },
     "1f": function(require, module, exports, global) {
         "use strict";
         var Layout = boxspring.define("boxspring.layout.Layout", {
             properties: {
-                target: {}
+                view: {
+                    value: null
+                },
+                size: {
+                    value: function() {
+                        return new boxspring.geom.Size;
+                    }
+                },
+                offset: {
+                    value: function() {
+                        return new boxspring.geom.Point;
+                    }
+                }
             },
-            update: function() {
-                var view = this.target;
-                if (view === null) return this;
-                var border = view.borderWidth;
-                var outerSizeX = view.measuredSize.x - border * 2;
-                var outerSizeY = view.measuredSize.y - border * 2;
-                var measures = [];
-                var children = view.children;
+            layout: function() {}
+        });
+    },
+    "1g": function(require, module, exports, global) {
+        "use strict";
+        var FixedLayout = boxspring.define("boxspring.layout.FixedLayout", {
+            inherits: boxspring.layout.Layout,
+            layout: function() {
+                var border = this.view.borderWidth;
+                var frameSizeX = this.size.x - border * 2;
+                var frameSizeY = this.size.y - border * 2;
+                var frameOffsetX = this.offset.x;
+                var frameOffsetY = this.offset.y;
+                var children = this.view.children;
                 for (var i = 0; i < children.length; i++) {
-                    var child = children[i];
-                    var positionT = child.position.top;
-                    var positionL = child.position.left;
-                    var positionR = child.position.right;
-                    var positionB = child.position.bottom;
+                    var view = children[i];
+                    var positionT = view.position.top;
+                    var positionL = view.position.left;
+                    var positionR = view.position.right;
+                    var positionB = view.position.bottom;
                     if (positionT === "auto" && positionB === "auto" && positionL === "auto" && positionR === "auto") {
-                        measures.push(child);
                         continue;
                     }
-                    var sizeX = child.size.x;
-                    var sizeY = child.size.y;
-                    var maxSizeX = child.maxSize.x;
-                    var maxSizeY = child.maxSize.y;
-                    var minSizeX = child.minSize.x;
-                    var minSizeY = child.minSize.y;
-                    var marginT = child.margin.top;
-                    var marginL = child.margin.left;
-                    var marginR = child.margin.right;
-                    var marginB = child.margin.bottom;
+                    var sizeX = view.size.x;
+                    var sizeY = view.size.y;
+                    var maxSizeX = view.maxSize.x;
+                    var maxSizeY = view.maxSize.y;
+                    var minSizeX = view.minSize.x;
+                    var minSizeY = view.minSize.y;
+                    var marginT = view.margin.top;
+                    var marginL = view.margin.left;
+                    var marginR = view.margin.right;
+                    var marginB = view.margin.bottom;
                     var marginX = marginL + marginR;
                     var marginY = marginT + marginB;
-                    var measuredSizeX = sizeX === "fill" ? outerSizeX : sizeX;
-                    var measuredSizeY = sizeY === "fill" ? outerSizeY : sizeY;
+                    var measuredSizeX = sizeX === "fill" ? frameSizeX : sizeX;
+                    var measuredSizeY = sizeY === "fill" ? frameSizeY : sizeY;
                     var measuredOffsetX = 0;
                     var measuredOffsetY = 0;
                     if (positionL !== "auto" && positionR !== "auto") {
-                        measuredSizeX = outerSizeX - positionL - positionR - marginX;
+                        measuredSizeX = frameSizeX - positionL - positionR - marginX;
                     }
                     if (positionT !== "auto" && positionB !== "auto") {
-                        measuredSizeY = outerSizeY - positionT - positionB - marginY;
+                        measuredSizeY = frameSizeY - positionT - positionB - marginY;
                     }
                     if (maxSizeX !== "none" && measuredSizeX > maxSizeX) measuredSizeX = maxSizeX;
                     if (minSizeX !== "none" && measuredSizeX < minSizeX) measuredSizeX = minSizeX;
@@ -3959,73 +3983,79 @@
                     if (positionL !== "auto") {
                         measuredOffsetX = positionL + marginL + border;
                     } else if (positionR !== "auto") {
-                        measuredOffsetX = outerSizeX - measuredSizeX - positionR + border;
+                        measuredOffsetX = frameSizeX - measuredSizeX - positionR + border;
                     }
                     if (positionT !== "auto") {
                         measuredOffsetY = positionT + marginT + border;
                     } else if (positionB !== "auto") {
-                        measuredOffsetY = outerSizeY - measuredSizeY - positionB + border;
+                        measuredOffsetY = frameSizeY - measuredSizeY - positionB + border;
                     }
-                    child.measuredSize.x = measuredSizeX;
-                    child.measuredSize.y = measuredSizeY;
-                    child.measuredOffset.x = measuredOffsetX;
-                    child.measuredOffset.y = measuredOffsetY;
+                    view.measuredSize.x = measuredSizeX;
+                    view.measuredSize.y = measuredSizeY;
+                    view.measuredOffset.x = measuredOffsetX + frameOffsetX;
+                    view.measuredOffset.y = measuredOffsetY + frameOffsetY;
                 }
-                this.updateLayout(measures);
-                return this;
-            },
-            updateLayout: function(children) {}
+            }
         });
     },
-    "1g": function(require, module, exports, global) {
+    "1h": function(require, module, exports, global) {
         "use strict";
-        var LinearLayout = boxspring.define("boxspring.layout.LinearLayout", {
-            inherits: boxspring.layout.Layout,
+        var FlexibleLayout = boxspring.define("boxspring.layout.FlexibleLayout", {
+            inherits: boxspring.layout.FixedLayout,
             properties: {
                 orientation: {
                     value: "vertical"
                 },
-                contentVerticalAlignment: {
+                verticalAlignment: {
                     value: "start"
                 },
-                contentHorizontalAlignment: {
+                horizontalAlignment: {
                     value: "start"
                 }
             },
-            updateLayout: function(children) {
+            layout: function() {
+                FlexibleLayout.parent.layout.call(this);
                 switch (this.orientation) {
                   case "vertical":
-                    this.__updateLayoutVertically(children);
+                    this.__layoutVertically();
                     break;
                   case "horizontal":
-                    this.__updateLayoutHorizontally(children);
+                    this.__layoutHorizontally();
                     break;
                 }
                 return this;
             },
             onPropertyChange: function(target, property, newValue, oldValue) {
-                if (property === "orientation" || property === "contentVerticalAlignment" || property === "contentHorizontalAlignment") {
-                    if (this.target) this.target.scheduleLayout();
+                if (property === "orientation" || property === "verticalAlignment" || property === "horizontalAlignment") {
+                    if (this.view) this.view.scheduleLayout();
                 }
-                LinearLayout.parent.onPropertyChange.apply(this, arguments);
+                FlexibleLayout.parent.onPropertyChange.apply(this, arguments);
             },
-            __updateLayoutHorizontally: function(children) {
-                var contentAlignmentY = this.contentVerticalAlignment;
-                var contentAlignmentX = this.contentHorizontalAlignment;
-                var border = this.target.borderWidth;
-                var paddingT = this.target.padding.top;
-                var paddingL = this.target.padding.left;
-                var paddingB = this.target.padding.bottom;
-                var paddingR = this.target.padding.right;
-                var contentSizeX = this.target.measuredSize.x - paddingL - paddingR - border * 2;
-                var contentSizeY = this.target.measuredSize.y - paddingT - paddingB - border * 2;
+            __layoutHorizontally: function() {
+                var contentAlignmentY = this.verticalAlignment;
+                var contentAlignmentX = this.horizontalAlignment;
+                var border = this.view.borderWidth;
+                var paddingT = this.view.padding.top;
+                var paddingL = this.view.padding.left;
+                var paddingB = this.view.padding.bottom;
+                var paddingR = this.view.padding.right;
+                var contentSizeX = this.size.x - paddingL - paddingR - border * 2;
+                var contentSizeY = this.size.y - paddingT - paddingB - border * 2;
                 var usedSpace = 0;
                 var freeSpace = contentSizeX;
                 var fluidItems = [];
                 var fluidSpace = 0;
                 var fluidCount = 0;
+                var children = this.view.children;
                 for (var i = 0; i < children.length; i++) {
                     var child = children[i];
+                    var positionT = child.position.top;
+                    var positionL = child.position.left;
+                    var positionR = child.position.right;
+                    var positionB = child.position.bottom;
+                    if (positionT !== "auto" || positionB !== "auto" && positionL !== "auto" || positionR !== "auto") {
+                        continue;
+                    }
                     var sizeX = child.size.x;
                     var sizeY = child.size.y;
                     var maxSizeX = child.maxSize.x;
@@ -4124,23 +4154,31 @@
                 }
                 return this;
             },
-            __updateLayoutVertically: function(children) {
-                var contentAlignmentY = this.contentVerticalAlignment;
-                var contentAlignmentX = this.contentHorizontalAlignment;
-                var border = this.target.borderWidth;
-                var paddingT = this.target.padding.top;
-                var paddingL = this.target.padding.left;
-                var paddingB = this.target.padding.bottom;
-                var paddingR = this.target.padding.right;
-                var contentSizeX = this.target.measuredSize.x - paddingL - paddingR - border * 2;
-                var contentSizeY = this.target.measuredSize.y - paddingT - paddingB - border * 2;
+            __layoutVertically: function() {
+                var contentAlignmentY = this.verticalAlignment;
+                var contentAlignmentX = this.horizontalAlignment;
+                var border = this.view.borderWidth;
+                var paddingT = this.view.padding.top;
+                var paddingL = this.view.padding.left;
+                var paddingB = this.view.padding.bottom;
+                var paddingR = this.view.padding.right;
+                var contentSizeX = this.size.x - paddingL - paddingR - border * 2;
+                var contentSizeY = this.size.y - paddingT - paddingB - border * 2;
                 var usedSpace = 0;
                 var freeSpace = contentSizeY;
                 var fluidItems = [];
                 var fluidSpace = 0;
                 var fluidCount = 0;
+                var children = this.view.children;
                 for (var i = 0; i < children.length; i++) {
                     var child = children[i];
+                    var positionT = child.position.top;
+                    var positionL = child.position.left;
+                    var positionR = child.position.right;
+                    var positionB = child.position.bottom;
+                    if (positionT !== "auto" || positionB !== "auto" && positionL !== "auto" || positionR !== "auto") {
+                        continue;
+                    }
                     var sizeX = child.size.x;
                     var sizeY = child.size.y;
                     var maxSizeX = child.maxSize.x;
@@ -4241,14 +4279,14 @@
             }
         });
     },
-    "1h": function(require, module, exports, global) {
+    "1i": function(require, module, exports, global) {
         "use strict";
-        require("1i");
         require("1j");
         require("1k");
         require("1l");
+        require("1m");
     },
-    "1i": function(require, module, exports, global) {
+    "1j": function(require, module, exports, global) {
         "use strict";
         var View = boxspring.define("boxspring.view.View", {
             inherits: boxspring.event.Emitter,
@@ -4282,18 +4320,25 @@
             },
             properties: {
                 name: {
-                    value: ""
+                    value: null
                 },
                 window: {
+                    value: null,
                     write: false
                 },
                 parent: {
+                    value: null,
                     write: false
                 },
                 children: {
+                    value: [],
                     write: false,
-                    clone: true,
-                    value: []
+                    clone: true
+                },
+                contentLayout: {
+                    value: function() {
+                        return new boxspring.layout.FlexibleLayout;
+                    }
                 },
                 backgroundColor: {
                     value: "#fff"
@@ -4334,11 +4379,6 @@
                         return new boxspring.geom.Point;
                     }
                 },
-                layout: {
-                    value: function() {
-                        return new boxspring.layout.LinearLayout;
-                    }
-                },
                 transform: {
                     value: function() {
                         return new boxspring.geom.Matrix;
@@ -4359,45 +4399,39 @@
                     value: function() {
                         return new boxspring.geom.Thickness;
                     },
-                    onSet: function(newValue, oldValue) {
-                        if (typeof newValue === "number") {
-                            this.margin.top = newValue;
-                            this.margin.left = newValue;
-                            this.margin.right = newValue;
-                            this.margin.bottom = newValue;
-                            return oldValue;
+                    onSet: function(value) {
+                        if (typeof value === "number") {
+                            this.margin.top = value;
+                            this.margin.left = value;
+                            this.margin.right = value;
+                            this.margin.bottom = value;
                         }
-                        return newValue;
                     }
                 },
                 padding: {
                     value: function() {
                         return new boxspring.geom.Thickness;
                     },
-                    onSet: function(newValue, oldValue) {
-                        if (typeof newValue === "number") {
-                            this.padding.top = newValue;
-                            this.padding.left = newValue;
-                            this.padding.right = newValue;
-                            this.padding.bottom = newValue;
-                            return oldValue;
+                    onSet: function(value) {
+                        if (typeof value === "number") {
+                            this.padding.top = value;
+                            this.padding.left = value;
+                            this.padding.right = value;
+                            this.padding.bottom = value;
                         }
-                        return newValue;
                     }
                 },
                 position: {
                     value: function() {
                         return new boxspring.geom.Position("auto");
                     },
-                    onSet: function(newValue, oldValue) {
-                        if (newValue === "auto") {
-                            this.position.top = newValue;
-                            this.position.left = newValue;
-                            this.position.right = newValue;
-                            this.position.bottom = newValue;
-                            return oldValue;
+                    onSet: function(value) {
+                        if (value === "auto") {
+                            this.position.top = value;
+                            this.position.left = value;
+                            this.position.right = value;
+                            this.position.bottom = value;
                         }
-                        return newValue;
                     }
                 },
                 weight: {
@@ -4648,14 +4682,12 @@
             layoutOnPropertyChange: function(property) {
                 return scheduleLayoutProperties.indexOf(property) !== -1;
             },
-            scheduleRedraw: function(area) {
-                if (area) {
-                    if (this.__redrawArea === null) {
-                        this.__redrawArea = new boxspring.geom.Rectangle;
-                    }
-                    this.__redrawArea = boxspring.geom.Rectangle.union(this.__redrawArea, area);
-                }
+            scheduleRedraw: function() {
                 this.__redrawScheduled = true;
+                return this;
+            },
+            scheduleLayout: function() {
+                this.__layoutScheduled = true;
                 return this;
             },
             scheduleReflow: function() {
@@ -4663,28 +4695,11 @@
                 if (parent) parent.scheduleLayout();
                 return this;
             },
-            scheduleLayout: function() {
-                this.__layoutScheduled = true;
-                return this;
-            },
             redrawIfNeeded: function(context) {
                 if (this.__redrawScheduled) {
                     this.__redrawScheduled = false;
-                    var rect = null;
-                    var area = this.__redrawArea;
-                    if (area === null) {
-                        rect = new boxspring.geom.Rectangle;
-                        rect.size.x = this.measuredSize.x;
-                        rect.size.y = this.measuredSize.y;
-                    } else {
-                        rect = new boxspring.geom.Rectangle;
-                        rect.size.x = area.size.x || this.measuredSize.x;
-                        rect.size.y = area.size.y || this.measuredSize.y;
-                        rect.origin.x = area.origin.x;
-                        rect.origin.y = area.origin.y;
-                    }
-                    this.redraw(context, area);
-                    this.emit("redraw", context, area);
+                    this.redraw(context);
+                    this.emit("redraw", context);
                 }
                 return this;
             },
@@ -4696,7 +4711,7 @@
                 }
                 if (this.__layoutScheduled) {
                     this.__layoutScheduled = false;
-                    this.layoutChildren();
+                    this.layout();
                     this.emit("layout");
                 }
                 _.invoke(this.__children, "layoutIfNeeded");
@@ -4705,15 +4720,16 @@
             redraw: function(context, area) {
                 return this;
             },
-            layoutChildren: function() {
-                if (this.layout) {
-                    this.layout.target = this;
-                    this.layout.update();
+            layout: function() {
+                if (this.contentLayout) {
+                    this.contentLayout.view = this;
+                    this.contentLayout.size.x = this.measuredSize.x;
+                    this.contentLayout.size.y = this.measuredSize.y;
+                    this.contentLayout.layout();
                 }
                 return this;
             },
             onPropertyChange: function(target, property, newValue, oldValue, e) {
-                var ViewPropertyTransaction = boxspring.animation.ViewPropertyTransaction;
                 if (this.redrawOnPropertyChange(property)) this.scheduleRedraw();
                 if (this.reflowOnPropertyChange(property)) this.scheduleReflow();
                 if (this.layoutOnPropertyChange(property)) this.scheduleLayout();
@@ -4724,6 +4740,7 @@
                 if (viewPropertyAnimationGroup && this.propertyIsAnimatable(property)) {
                     var t = newValue;
                     var f = oldValue;
+                    console.log("Animating " + property + " from " + oldValue + " to " + newValue);
                     if (property === "measuredSize.x" && this.__measuredSizeXSet === false || property === "measuredSize.y" && this.__measuredSizeYSet === false || property === "measuredOffset.x" && this.__measuredOffsetXSet === false || property === "measuredOffset.y" && this.__measuredOffsetYSet === false) {
                         f = t;
                     }
@@ -4789,17 +4806,16 @@
                 _.invoke(this.__children, "setWindow", value);
                 return this;
             },
-            __animatedPropertyValues: null,
-            __redrawArea: null,
             __redrawScheduled: false,
             __layoutScheduled: false,
             __measuredSizeXSet: false,
             __measuredSizeYSet: false,
             __measuredOffsetXSet: false,
-            __measuredOffsetYSet: false
+            __measuredOffsetYSet: false,
+            __animatedPropertyValues: null
         });
         var scheduleReflowProperties = [ "size.x", "size.y", "minSize.x", "minSize.y", "maxSize.x", "maxSize.y", "visible", "margin.top", "margin.left", "margin.right", "margin.bottom", "position.top", "position.left", "position.right", "position.bottom" ];
-        var scheduleLayoutProperties = [ "measuredSize.x", "measuredSize.y", "borderWidth", "padding.top", "padding.left", "padding.right", "padding.bottom", "layout" ];
+        var scheduleLayoutProperties = [ "measuredSize.x", "measuredSize.y", "borderWidth", "padding.top", "padding.left", "padding.right", "padding.bottom", "contentLayout" ];
         var animatableProperties = [ "backgroundColor", "borderColor", "shadowColor", "backgroundImage", "backgroundSize.x", "backgroundSize.y", "borderWidth", "borderRadius", "shadowBlur", "shadowOffset.x", "shadowOffset.y", "opacity", "measuredSize.x", "measuredSize.y", "measuredOffset.x", "measuredOffset.y" ];
         var layoutRoot = null;
         var animations = [];
@@ -4815,7 +4831,7 @@
             e.source.destroy();
         };
     },
-    "1j": function(require, module, exports, global) {
+    "1k": function(require, module, exports, global) {
         "use strict";
         var View = boxspring.override("boxspring.view.View", {
             destroy: function() {
@@ -4842,15 +4858,15 @@
                 updateDisplayWithMask(this, LAYOUT_UPDATE_MASK);
                 return this;
             },
-            scheduleRedraw: function(area) {
-                View.parent.scheduleRedraw.call(this, area);
+            scheduleRedraw: function() {
+                View.parent.scheduleRedraw.call(this);
                 updateDisplayWithMask(this, REDRAW_UPDATE_MASK);
                 return this;
             },
-            redraw: function(context, area) {
-                this.__redrawBackground(context, area);
-                this.__redrawBorder(context, area);
-                this.__redrawShadow(context, area);
+            redraw: function(context) {
+                this.__redrawBackground(context);
+                this.__redrawBorder(context);
+                this.__redrawShadow(context);
                 return this;
             },
             onPropertyChange: function(target, property, newValue, oldValue, e) {
@@ -4866,7 +4882,7 @@
                 View.parent.onPropertyAnimationUpdate.call(this, property, value);
                 updateDisplayWithMask(this, ANIMATE_UPDATE_MASK);
             },
-            __redrawBackground: function(context, area) {
+            __redrawBackground: function(context) {
                 var sizeX = this.measuredSize.x;
                 var sizeY = this.measuredSize.y;
                 var borderRadius = this.animatedPropertyValue("borderRadius");
@@ -5007,15 +5023,9 @@
                 view.scheduleRedraw();
             }
             if (mask & REDRAW_UPDATE_MASK) {
-                var area = view.__redrawArea;
-                if (area === null) {
-                    area = new boxspring.geom.Rectangle;
-                    area.size.x = view.measuredSize.x;
-                    area.size.y = view.measuredSize.y;
-                }
                 var context = cache.getContext("2d");
                 context.save();
-                context.clearRect(area.origin.x, area.origin.y, area.size.x, area.size.y);
+                context.clearRect(0, 0, view.measuredSize.x, view.measuredSize.y);
                 view.redrawIfNeeded(context);
                 context.restore();
             }
@@ -5063,7 +5073,7 @@
             });
         });
     },
-    "1k": function(require, module, exports, global) {
+    "1l": function(require, module, exports, global) {
         "use strict";
         var Window = boxspring.define("boxspring.view.Window", {
             inherits: boxspring.view.View,
@@ -5092,7 +5102,7 @@
         });
         var instance = null;
     },
-    "1l": function(require, module, exports, global) {
+    "1m": function(require, module, exports, global) {
         "use strict";
         var Window = boxspring.override("boxspring.view.Window", {
             constructor: function() {

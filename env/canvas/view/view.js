@@ -58,8 +58,8 @@ var View = boxspring.override('boxspring.view.View', {
      * @method scheduleRedraw
      * @since 0.9
      */
-    scheduleRedraw: function(area) {
-    	View.parent.scheduleRedraw.call(this, area)
+    scheduleRedraw: function() {
+    	View.parent.scheduleRedraw.call(this)
        	updateDisplayWithMask(this, REDRAW_UPDATE_MASK)
         return this
     },
@@ -68,10 +68,10 @@ var View = boxspring.override('boxspring.view.View', {
      * @method redraw
      * @since 0.9
      */
-	redraw: function(context, area) {
-		this.__redrawBackground(context, area)
-		this.__redrawBorder(context, area)
-		this.__redrawShadow(context, area)
+	redraw: function(context) {
+		this.__redrawBackground(context)
+		this.__redrawBorder(context)
+		this.__redrawShadow(context)
 		return this
 	},
 
@@ -126,7 +126,7 @@ var View = boxspring.override('boxspring.view.View', {
 	 * @scope private
 	 * @since 0.9
 	 */
-	__redrawBackground: function(context, area) {
+	__redrawBackground: function(context) {
 
 		var sizeX = this.measuredSize.x
 		var sizeY = this.measuredSize.y
@@ -397,21 +397,14 @@ var composite = function(view, screen) {
 
 	if (mask & REDRAW_UPDATE_MASK) {
 
-        var area = view.__redrawArea
-        if (area === null) {
-            area = new boxspring.geom.Rectangle()
-            area.size.x = view.measuredSize.x
-            area.size.y = view.measuredSize.y
-        }
 
 		var context = cache.getContext('2d')
 
 		context.save()
 		context.clearRect(
-			area.origin.x,
-			area.origin.y,
-			area.size.x,
-			area.size.y
+			0, 0,
+			view.measuredSize.x,
+			view.measuredSize.y
 		)
 
 		view.redrawIfNeeded(context)
