@@ -37,9 +37,9 @@ var View = boxspring.override('boxspring.view.View', {
 	},
 
    /**
-     * @method redrawOnPropertyChange
-     * @since 0.9
-     */
+	 * @method redrawOnPropertyChange
+	 * @since 0.9
+	 */
 	redrawOnPropertyChange: function(property) {
 		return scheduleRedrawProperties.indexOf(property) !== -1
 	},
@@ -54,47 +54,53 @@ var View = boxspring.override('boxspring.view.View', {
 		return this
 	},
 
-    /**
-     * @method scheduleRedraw
-     * @since 0.9
-     */
-    scheduleRedraw: function() {
-    	View.parent.scheduleRedraw.call(this)
-       	updateDisplayWithMask(this, REDRAW_UPDATE_MASK)
-        return this
-    },
+	/**
+	 * @method scheduleRedraw
+	 * @since 0.9
+	 */
+	scheduleRedraw: function() {
+		View.parent.scheduleRedraw.call(this)
+		updateDisplayWithMask(this, REDRAW_UPDATE_MASK)
+		return this
+	},
 
-    scheduleRender: function() {
-    	updateDisplayWithMask(this, RENDER_UPDATE_MASK)
-    },
+	scheduleRender: function() {
+		updateDisplayWithMask(this, RENDER_UPDATE_MASK)
+	},
 
    /**
-     * @method redraw
-     * @since 0.9
-     */
+	 * @method redraw
+	 * @since 0.9
+	 */
 	redraw: function(context) {
+		console.log('Redraw')
 		this.__redrawBackground(context)
 		this.__redrawBorder(context)
 		this.__redrawShadow(context)
 		return this
 	},
 
+	layout: function() {
+		console.log('Layout')
+		View.parent.layout.call(this)
+	},
+
 	composite: function(context, buffer) {
 
-	var sizeX = this.animatedPropertyValue('measuredSize.x')
-	var sizeY = this.animatedPropertyValue('measuredSize.y')
-	var offsetX = this.animatedPropertyValue('measuredOffset.x')
-	var offsetY = this.animatedPropertyValue('measuredOffset.y')
+		var sizeX = this.animatedPropertyValue('measuredSize.x')
+		var sizeY = this.animatedPropertyValue('measuredSize.y')
+		var offsetX = this.animatedPropertyValue('measuredOffset.x')
+		var offsetY = this.animatedPropertyValue('measuredOffset.y')
 
 		context.drawImage(
-	        buffer, 0, 0,
-	        buffer.width,
-	        buffer.height,
-	        offsetX,
-	        offsetY,
-	        sizeX,
-	        sizeY
-	    )
+			buffer, 0, 0,
+			buffer.width,
+			buffer.height,
+			offsetX,
+			offsetY,
+			sizeX,
+			sizeY
+		)
 
 	},
 
@@ -136,9 +142,9 @@ var View = boxspring.override('boxspring.view.View', {
 	 * @since 0.9
 	 */
 	onPropertyAnimationUpdate: function(property, value) {
-       View.parent.onPropertyAnimationUpdate.call(this, property, value)
-       updateDisplayWithMask(this, ANIMATE_UPDATE_MASK)
-    },
+	   View.parent.onPropertyAnimationUpdate.call(this, property, value)
+	   updateDisplayWithMask(this, ANIMATE_UPDATE_MASK)
+	},
 
 	//--------------------------------------------------------------------------
 	// Private API
@@ -210,34 +216,34 @@ var View = boxspring.override('boxspring.view.View', {
 		var sizeX = this.animatedPropertyValue('measuredSize.x')
 		var sizeY = this.animatedPropertyValue('measuredSize.y')
 
-  		var borderWidth = this.animatedPropertyValue('borderWidth')
-        var borderColor = this.animatedPropertyValue('borderColor')
-        var borderRadius = this.animatedPropertyValue('borderRadius')
+		var borderWidth = this.animatedPropertyValue('borderWidth')
+		var borderColor = this.animatedPropertyValue('borderColor')
+		var borderRadius = this.animatedPropertyValue('borderRadius')
 
 		if (borderWidth && borderColor) {
 
-            var strokeSizeX = sizeX - borderWidth
-            var strokeSizeY = sizeY - borderWidth
-            var strokeOriginX = borderWidth / 2
-            var strokeOriginY = borderWidth / 2
+			var strokeSizeX = sizeX - borderWidth
+			var strokeSizeY = sizeY - borderWidth
+			var strokeOriginX = borderWidth / 2
+			var strokeOriginY = borderWidth / 2
 
-            var strokeRadius = borderRadius - borderWidth / 2
-            if (strokeRadius < 0) {
-                strokeRadius = 0
-            }
+			var strokeRadius = borderRadius - borderWidth / 2
+			if (strokeRadius < 0) {
+				strokeRadius = 0
+			}
 
-            context.save()
+			context.save()
 
-            createRectPath(context, strokeOriginX, strokeOriginY, strokeSizeX, strokeSizeY, strokeRadius)
+			createRectPath(context, strokeOriginX, strokeOriginY, strokeSizeX, strokeSizeY, strokeRadius)
 
-            context.lineCap = 'butt'
-            context.lineWidth = borderWidth
-            context.strokeStyle = borderColor
-            context.stroke()
-            context.restore()
-        }
+			context.lineCap = 'butt'
+			context.lineWidth = borderWidth
+			context.strokeStyle = borderColor
+			context.stroke()
+			context.restore()
+		}
 
-        return this
+		return this
 	},
 
 	/**
@@ -361,19 +367,21 @@ var updateDisplay = function() {
 	if (root == null)
 		return
 
-    if (root.size.x === 'auto') root.measuredSize.x = window.innerWidth
-    if (root.size.y === 'auto') root.measuredSize.y = window.innerHeight
+	if (root.size.x === 'auto') root.measuredSize.x = window.innerWidth
+	if (root.size.y === 'auto') root.measuredSize.y = window.innerHeight
 
-    screenContext.clearRect(
-    	0, 0,
-    	screenCanvas.width,
-    	screenCanvas.height
-    )
 
-    composite(root, screenContext)
 
-    updateDisplayViews = {}
-    updateDisplayMasks = {}
+	screenContext.clearRect(
+		0, 0,
+		screenCanvas.width,
+		screenCanvas.height
+	)
+
+	composite(root, screenContext)
+
+	updateDisplayViews = {}
+	updateDisplayMasks = {}
 
 	if (!lastCalledTime) {
 		lastCalledTime = new Date().getTime();
@@ -444,12 +452,12 @@ var composite = function(view, screen) {
 
 	screen.translate(offsetX, offsetY)
 
-    var children = view.__children
-    for (var i = 0; i < children.length; i++) {
-        composite(children[i], screen)
-    }
+	var children = view.__children
+	for (var i = 0; i < children.length; i++) {
+		composite(children[i], screen)
+	}
 
-    screen.restore()
+	screen.restore()
 }
 
 /**
@@ -509,7 +517,7 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	screenContext = screenCanvas.getContext('2d')
 
 	window.addEventListener('resize', function() {
-	    screenCanvas.width = window.innerWidth
-	    screenCanvas.height = window.innerHeight
+		screenCanvas.width = window.innerWidth
+		screenCanvas.height = window.innerHeight
 	})
 })

@@ -5074,10 +5074,15 @@
                 updateDisplayWithMask(this, RENDER_UPDATE_MASK);
             },
             redraw: function(context) {
+                console.log("Redraw");
                 this.__redrawBackground(context);
                 this.__redrawBorder(context);
                 this.__redrawShadow(context);
                 return this;
+            },
+            layout: function() {
+                console.log("Layout");
+                View.parent.layout.call(this);
             },
             composite: function(context, buffer) {
                 var sizeX = this.animatedPropertyValue("measuredSize.x");
@@ -5354,7 +5359,7 @@
                     this.scroller.setDimensions(this.measuredSize.x, this.measuredSize.y, this.contentSize.x, this.contentSize.y);
                 }
                 if (property === "contentOffset.x" || property === "contentOffset.y") {
-                    this.scheduleReflow();
+                    this.scheduleRender();
                 }
             },
             onTouchStart: function(touches, e) {
