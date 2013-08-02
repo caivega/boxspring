@@ -67,7 +67,7 @@ var ScrollView = boxspring.override('boxspring.view.ScrollView', {
 
 		if (property === 'contentOffset.x' ||
 			property === 'contentOffset.y') {
-			this.scheduleReflow()
+			this.scheduleRender()
 		}
 	},
 
