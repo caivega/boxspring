@@ -64,6 +64,10 @@ var View = boxspring.override('boxspring.view.View', {
         return this
     },
 
+    scheduleRender: function() {
+    	updateDisplayWithMask(this, RENDER_UPDATE_MASK)
+    },
+
    /**
      * @method redraw
      * @since 0.9
@@ -73,6 +77,25 @@ var View = boxspring.override('boxspring.view.View', {
 		this.__redrawBorder(context)
 		this.__redrawShadow(context)
 		return this
+	},
+
+	composite: function(context, buffer) {
+
+	var sizeX = this.animatedPropertyValue('measuredSize.x')
+	var sizeY = this.animatedPropertyValue('measuredSize.y')
+	var offsetX = this.animatedPropertyValue('measuredOffset.x')
+	var offsetY = this.animatedPropertyValue('measuredOffset.y')
+
+		context.drawImage(
+	        buffer, 0, 0,
+	        buffer.width,
+	        buffer.height,
+	        offsetX,
+	        offsetY,
+	        sizeX,
+	        sizeY
+	    )
+
 	},
 
 	//--------------------------------------------------------------------------
@@ -100,7 +123,8 @@ var View = boxspring.override('boxspring.view.View', {
 			property === 'measuredOffset.x' ||
 			property === 'measuredOffset.y' ||
 			property === 'opacity' ||
-			property === 'transform') {
+			property === 'transform' ||
+			property === 'overflow') {
 			updateDisplayWithMask(this, RENDER_UPDATE_MASK)
 		}
 
@@ -320,8 +344,6 @@ var fps;
  */
 var updateDisplay = function() {
 
-//	console.log(' --- Update Display --- ')
-
 	updateDisplayScheduled = false
 
 	var root = null
@@ -338,8 +360,6 @@ var updateDisplay = function() {
 
 	if (root == null)
 		return
-
-	//console.log(' --- Rendering --- ')
 
     if (root.size.x === 'auto') root.measuredSize.x = window.innerWidth
     if (root.size.y === 'auto') root.measuredSize.y = window.innerHeight
@@ -397,9 +417,7 @@ var composite = function(view, screen) {
 
 	if (mask & REDRAW_UPDATE_MASK) {
 
-
 		var context = cache.getContext('2d')
-
 		context.save()
 		context.clearRect(
 			0, 0,
@@ -415,18 +433,13 @@ var composite = function(view, screen) {
 	screen.save()
 	screen.globalAlpha = screen.globalAlpha * view.animatedPropertyValue('opacity');
 
+	// if (view.overflow === 'hidden') {
+	// 	screen.rect(offsetX, offsetY, sizeX, sizeY)
+	// 	screen.clip()
+	// }
+
 	if (sizeX > 0 && sizeY  > 0 && cache.width > 0 && cache.height > 0) {
-
-		screen.drawImage(
-	        cache, 0, 0,
-	        cache.width,
-	        cache.height,
-	        offsetX,
-	        offsetY,
-	        sizeX,
-	        sizeY
-	    )
-
+		view.composite(screen, cache)
 	}
 
 	screen.translate(offsetX, offsetY)

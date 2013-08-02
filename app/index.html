@@ -36,14 +36,13 @@
 		root.size.x = 'auto'
 		root.size.y = 'auto'
 
-		root.on('touchcancel', function() { console.log('Root Touch Cancel')})
-		root.on('touchstart', function() { console.log('Root Touch Start')})
-		root.on('touchmove', function() { console.log('Root Touch Move')})
-		root.on('touchend', function() { console.log('Root Touch Ens')})
-
 		var forwarder = new boxspring.event.TouchForwarder(root)
 
-		for (var i = 0; i < 20; i++) {
+		//
+		// Animations
+		//
+/*
+		for (var i = 0; i < 5; i++) {
 			var view = createView()
 			view.name = 'View' + i
 			view.size.x = 'fill'
@@ -51,35 +50,61 @@
 			root.addChild(view)
 		}
 
-		// var view = createView()
-		// view.on('touchcancel', function() { console.log('Touch Cancel')})
-		// view.on('touchstart', function() { console.log('Touch Start')})
-		// view.on('touchmove', function() { console.log('Touch Move')})
-		// view.on('touchend', function() { console.log('Touch Ens')})
-		// root.addChild(view)
+		var animate = function() {
 
-			var animate = function() {
-
-
-				View.setupAnimation(1200)
-				root.contentLayout.orientation = root.contentLayout.orientation === 'horizontal' ? 'vertical' : 'horizontal'
-				View.startAnimation()
+//			var view = createView()
+//			view.size.y = 0
+//			view.opacity = 0
+//			root.addChild(view)
 
 
 
-			}
+			View.setupAnimation(1200)
 
-			///document.addEventListener('click', animate)
-			document.addEventListener('touchend', animate)
+			//view.backgroundColor = 'red'
 
-			// var RenderLoop = boxspring.render.RenderLoop
+//			root.contentLayout.orientation = root.contentLayout.orientation === 'horizontal' ? 'vertical' : 'horizontal'
+//	view.size.y = 'fill'
+//	view.opacity = 1
+			View.startAnimation()
+		}
 
-			// var tick = function() {
-			// 	console.log('Tack')
-			// }
+		document.addEventListener('touchend', animate)
+*/
 
-			// RenderLoop.run(tick)
-			// RenderLoop.cancel(tick)
+		//
+		//
+		//
+
+		var scrollview = new boxspring.view.ScrollView()
+		scrollview.backgroundColor = 'rgba(255, 0, 0, 0.5)'
+		root.addChild(scrollview)
+
+		scrollview.contentSize.x = 'fill'
+		scrollview.contentSize.y = 500
+
+		for (var i = 0; i < 50; i++) {
+			var view = createView()
+			view.name = 'View' + i
+			view.size.x = 'fill'
+			view.size.y = 100
+
+			view.padding = 20
+
+			var sub = createView()
+			sub.backgroundColor = 'rgba(255, 255, 255, 0.5)'
+			view.addChild(sub)
+
+			scrollview.addChild(view)
+
+
+
+		}
+
+
+		document.addEventListener('touchstart', function(e) {
+			e.preventDefault()
+		})
 
 	</script>
 

@@ -17,8 +17,8 @@
         require("g");
         require("z");
         require("11");
-        require("1e");
-        require("1i");
+        require("1g");
+        require("1k");
         module.exports = boxspring;
     },
     "1": function(require, module, exports, global) {
@@ -2652,21 +2652,18 @@
                 return this;
             },
             onPropertyChange: function(target, property, value) {
-                var update = function(property, value) {
-                    if (this[property] !== value) this[property] = value;
-                };
                 switch (property) {
                   case "x":
-                    update.call(this, "left", value);
+                    this.left = value;
                     break;
                   case "y":
-                    update.call(this, "top", value);
+                    this.top = value;
                     break;
                   case "left":
-                    update.call(this, "x", value);
+                    this.x = value;
                     break;
-                  case "right":
-                    update.call(this, "y", value);
+                  case "bottom":
+                    this.y = value;
                     break;
                 }
                 Position.parent.onPropertyChange.apply(this, arguments);
@@ -2758,8 +2755,8 @@
                     write: false
                 }
             },
-            constructor: function(type, bubbles, touches) {
-                TouchEvent.parent.constructor.call(this, type, bubbles);
+            constructor: function(type, bubbleable, cancelable, touches) {
+                TouchEvent.parent.constructor.call(this, type, bubbleable, cancelable);
                 this.__touches = touches;
                 return this;
             }
@@ -2874,10 +2871,10 @@
                         listeners[i].apply(this, args);
                     }
                 }
-                if (!event.bubbles || event.stopped) return this;
+                if (!event.bubbleable || event.stopped) return this;
                 var parentReceiver = this.parentReceiver;
                 if (parentReceiver instanceof Emitter) {
-                    parentReceiver.emit.call(parentReceiver, e);
+                    parentReceiver.emit.call(parentReceiver, event);
                 }
                 return this;
             },
@@ -2966,7 +2963,7 @@
                 });
                 var all = _.clone(this.touches);
                 targets.forEach(function(touches, target) {
-                    target.emit(new boxspring.event.TouchEvent("touchcancel", true, all), touches);
+                    target.emit(new boxspring.event.TouchEvent("touchcancel", true, true, all), touches);
                 }, this);
             },
             onTouchStart: function(e) {
@@ -2989,7 +2986,7 @@
                 }, this);
                 var all = _.clone(this.touches);
                 targets.forEach(function(touches, target) {
-                    target.emit(new boxspring.event.TouchEvent("touchstart", true, all), touches);
+                    target.emit(new boxspring.event.TouchEvent("touchstart", true, true, all), touches);
                 });
             },
             onTouchMove: function(e) {
@@ -3006,7 +3003,7 @@
                 }, this);
                 var all = _.clone(this.touches);
                 targets.forEach(function(touches, target) {
-                    target.emit(new boxspring.event.TouchEvent("touchmove", true, all), touches);
+                    target.emit(new boxspring.event.TouchEvent("touchmove", true, true, all), touches);
                 });
             },
             onTouchEnd: function(e) {
@@ -3023,7 +3020,7 @@
                 }, this);
                 var all = _.clone(this.touches);
                 targets.forEach(function(touches, target) {
-                    target.emit(new boxspring.event.TouchEvent("touchend", true, all), touches);
+                    target.emit(new boxspring.event.TouchEvent("touchend", true, true, all), touches);
                 });
             }
         });
@@ -3418,15 +3415,15 @@
         "use strict";
         require("12");
         require("13");
-        require("14");
-        require("15");
         require("16");
         require("17");
+        require("18");
         require("19");
-        require("1a");
         require("1b");
         require("1c");
         require("1d");
+        require("1e");
+        require("1f");
     },
     "12": function(require, module, exports, global) {
         "use strict";
@@ -3436,14 +3433,236 @@
     },
     "13": function(require, module, exports, global) {
         "use strict";
+        var parse = require("14");
         var ColorEvaluator = boxspring.define("boxspring.animation.ColorEvaluator", {
             inherit: boxspring.animation.TypeEvaluator,
             evaluate: function(progress, from, to) {
-                return to;
-            }
+                if (this.__f == null) this.__f = parse(from);
+                if (this.__t == null) this.__t = parse(to);
+                var f = this.__f;
+                var t = this.__t;
+                var r = progress * (f.r - t.r) + f.r;
+                var g = progress * (f.g - t.g) + f.g;
+                var b = progress * (f.b - t.b) + f.b;
+                var a = progress * (f.a - t.a) + f.a;
+                return "rgba(" + r + "," + g + "," + b + "," + a + ")";
+            },
+            __f: null,
+            __t: null
         });
     },
     "14": function(require, module, exports, global) {
+        var colors = require("15");
+        module.exports = parse;
+        function parse(str) {
+            return named(str) || hex3(str) || hex6(str) || rgb(str) || rgba(str);
+        }
+        function named(str) {
+            var c = colors[str.toLowerCase()];
+            if (!c) return;
+            return {
+                r: c[0],
+                g: c[1],
+                b: c[2]
+            };
+        }
+        function rgb(str) {
+            if (0 == str.indexOf("rgb(")) {
+                str = str.match(/rgb\(([^)]+)\)/)[1];
+                var parts = str.split(/ *, */).map(Number);
+                return {
+                    r: parts[0],
+                    g: parts[1],
+                    b: parts[2],
+                    a: 1
+                };
+            }
+        }
+        function rgba(str) {
+            if (0 == str.indexOf("rgba(")) {
+                str = str.match(/rgba\(([^)]+)\)/)[1];
+                var parts = str.split(/ *, */).map(Number);
+                return {
+                    r: parts[0],
+                    g: parts[1],
+                    b: parts[2],
+                    a: parts[3]
+                };
+            }
+        }
+        function hex6(str) {
+            if ("#" == str[0] && 7 == str.length) {
+                return {
+                    r: parseInt(str.slice(1, 3), 16),
+                    g: parseInt(str.slice(3, 5), 16),
+                    b: parseInt(str.slice(5, 7), 16),
+                    a: 1
+                };
+            }
+        }
+        function hex3(str) {
+            if ("#" == str[0] && 4 == str.length) {
+                return {
+                    r: parseInt(str[1] + str[1], 16),
+                    g: parseInt(str[2] + str[2], 16),
+                    b: parseInt(str[3] + str[3], 16),
+                    a: 1
+                };
+            }
+        }
+    },
+    "15": function(require, module, exports, global) {
+        module.exports = {
+            aliceblue: [ 240, 248, 255 ],
+            antiquewhite: [ 250, 235, 215 ],
+            aqua: [ 0, 255, 255 ],
+            aquamarine: [ 127, 255, 212 ],
+            azure: [ 240, 255, 255 ],
+            beige: [ 245, 245, 220 ],
+            bisque: [ 255, 228, 196 ],
+            black: [ 0, 0, 0 ],
+            blanchedalmond: [ 255, 235, 205 ],
+            blue: [ 0, 0, 255 ],
+            blueviolet: [ 138, 43, 226 ],
+            brown: [ 165, 42, 42 ],
+            burlywood: [ 222, 184, 135 ],
+            cadetblue: [ 95, 158, 160 ],
+            chartreuse: [ 127, 255, 0 ],
+            chocolate: [ 210, 105, 30 ],
+            coral: [ 255, 127, 80 ],
+            cornflowerblue: [ 100, 149, 237 ],
+            cornsilk: [ 255, 248, 220 ],
+            crimson: [ 220, 20, 60 ],
+            cyan: [ 0, 255, 255 ],
+            darkblue: [ 0, 0, 139 ],
+            darkcyan: [ 0, 139, 139 ],
+            darkgoldenrod: [ 184, 132, 11 ],
+            darkgray: [ 169, 169, 169 ],
+            darkgreen: [ 0, 100, 0 ],
+            darkgrey: [ 169, 169, 169 ],
+            darkkhaki: [ 189, 183, 107 ],
+            darkmagenta: [ 139, 0, 139 ],
+            darkolivegreen: [ 85, 107, 47 ],
+            darkorange: [ 255, 140, 0 ],
+            darkorchid: [ 153, 50, 204 ],
+            darkred: [ 139, 0, 0 ],
+            darksalmon: [ 233, 150, 122 ],
+            darkseagreen: [ 143, 188, 143 ],
+            darkslateblue: [ 72, 61, 139 ],
+            darkslategray: [ 47, 79, 79 ],
+            darkslategrey: [ 47, 79, 79 ],
+            darkturquoise: [ 0, 206, 209 ],
+            darkviolet: [ 148, 0, 211 ],
+            deeppink: [ 255, 20, 147 ],
+            deepskyblue: [ 0, 191, 255 ],
+            dimgray: [ 105, 105, 105 ],
+            dimgrey: [ 105, 105, 105 ],
+            dodgerblue: [ 30, 144, 255 ],
+            firebrick: [ 178, 34, 34 ],
+            floralwhite: [ 255, 255, 240 ],
+            forestgreen: [ 34, 139, 34 ],
+            fuchsia: [ 255, 0, 255 ],
+            gainsboro: [ 220, 220, 220 ],
+            ghostwhite: [ 248, 248, 255 ],
+            gold: [ 255, 215, 0 ],
+            goldenrod: [ 218, 165, 32 ],
+            gray: [ 128, 128, 128 ],
+            green: [ 0, 128, 0 ],
+            greenyellow: [ 173, 255, 47 ],
+            grey: [ 128, 128, 128 ],
+            honeydew: [ 240, 255, 240 ],
+            hotpink: [ 255, 105, 180 ],
+            indianred: [ 205, 92, 92 ],
+            indigo: [ 75, 0, 130 ],
+            ivory: [ 255, 255, 240 ],
+            khaki: [ 240, 230, 140 ],
+            lavender: [ 230, 230, 250 ],
+            lavenderblush: [ 255, 240, 245 ],
+            lawngreen: [ 124, 252, 0 ],
+            lemonchiffon: [ 255, 250, 205 ],
+            lightblue: [ 173, 216, 230 ],
+            lightcoral: [ 240, 128, 128 ],
+            lightcyan: [ 224, 255, 255 ],
+            lightgoldenrodyellow: [ 250, 250, 210 ],
+            lightgray: [ 211, 211, 211 ],
+            lightgreen: [ 144, 238, 144 ],
+            lightgrey: [ 211, 211, 211 ],
+            lightpink: [ 255, 182, 193 ],
+            lightsalmon: [ 255, 160, 122 ],
+            lightseagreen: [ 32, 178, 170 ],
+            lightskyblue: [ 135, 206, 250 ],
+            lightslategray: [ 119, 136, 153 ],
+            lightslategrey: [ 119, 136, 153 ],
+            lightsteelblue: [ 176, 196, 222 ],
+            lightyellow: [ 255, 255, 224 ],
+            lime: [ 0, 255, 0 ],
+            limegreen: [ 50, 205, 50 ],
+            linen: [ 250, 240, 230 ],
+            magenta: [ 255, 0, 255 ],
+            maroon: [ 128, 0, 0 ],
+            mediumaquamarine: [ 102, 205, 170 ],
+            mediumblue: [ 0, 0, 205 ],
+            mediumorchid: [ 186, 85, 211 ],
+            mediumpurple: [ 147, 112, 219 ],
+            mediumseagreen: [ 60, 179, 113 ],
+            mediumslateblue: [ 123, 104, 238 ],
+            mediumspringgreen: [ 0, 250, 154 ],
+            mediumturquoise: [ 72, 209, 204 ],
+            mediumvioletred: [ 199, 21, 133 ],
+            midnightblue: [ 25, 25, 112 ],
+            mintcream: [ 245, 255, 250 ],
+            mistyrose: [ 255, 228, 225 ],
+            moccasin: [ 255, 228, 181 ],
+            navajowhite: [ 255, 222, 173 ],
+            navy: [ 0, 0, 128 ],
+            oldlace: [ 253, 245, 230 ],
+            olive: [ 128, 128, 0 ],
+            olivedrab: [ 107, 142, 35 ],
+            orange: [ 255, 165, 0 ],
+            orangered: [ 255, 69, 0 ],
+            orchid: [ 218, 112, 214 ],
+            palegoldenrod: [ 238, 232, 170 ],
+            palegreen: [ 152, 251, 152 ],
+            paleturquoise: [ 175, 238, 238 ],
+            palevioletred: [ 219, 112, 147 ],
+            papayawhip: [ 255, 239, 213 ],
+            peachpuff: [ 255, 218, 185 ],
+            peru: [ 205, 133, 63 ],
+            pink: [ 255, 192, 203 ],
+            plum: [ 221, 160, 203 ],
+            powderblue: [ 176, 224, 230 ],
+            purple: [ 128, 0, 128 ],
+            red: [ 255, 0, 0 ],
+            rosybrown: [ 188, 143, 143 ],
+            royalblue: [ 65, 105, 225 ],
+            saddlebrown: [ 139, 69, 19 ],
+            salmon: [ 250, 128, 114 ],
+            sandybrown: [ 244, 164, 96 ],
+            seagreen: [ 46, 139, 87 ],
+            seashell: [ 255, 245, 238 ],
+            sienna: [ 160, 82, 45 ],
+            silver: [ 192, 192, 192 ],
+            skyblue: [ 135, 206, 235 ],
+            slateblue: [ 106, 90, 205 ],
+            slategray: [ 119, 128, 144 ],
+            slategrey: [ 119, 128, 144 ],
+            snow: [ 255, 255, 250 ],
+            springgreen: [ 0, 255, 127 ],
+            steelblue: [ 70, 130, 180 ],
+            tan: [ 210, 180, 140 ],
+            teal: [ 0, 128, 128 ],
+            thistle: [ 216, 191, 216 ],
+            tomato: [ 255, 99, 71 ],
+            turquoise: [ 64, 224, 208 ],
+            violet: [ 238, 130, 238 ],
+            wheat: [ 245, 222, 179 ],
+            white: [ 255, 255, 255 ],
+            whitesmoke: [ 245, 245, 245 ],
+            yellow: [ 255, 255, 0 ],
+            yellowgreen: [ 154, 205, 5 ]
+        };
+    },
+    "16": function(require, module, exports, global) {
         "use strict";
         var ImageEvaluator = boxspring.define("boxspring.animation.ImageEvaluator", {
             inherit: boxspring.animation.TypeEvaluator,
@@ -3452,7 +3671,7 @@
             }
         });
     },
-    "15": function(require, module, exports, global) {
+    "17": function(require, module, exports, global) {
         "use strict";
         var NumberEvaluator = boxspring.define("boxspring.animation.NumberEvaluator", {
             inherit: boxspring.animation.TypeEvaluator,
@@ -3461,7 +3680,7 @@
             }
         });
     },
-    "16": function(require, module, exports, global) {
+    "18": function(require, module, exports, global) {
         "use strict";
         var AnimationRunner = boxspring.define("boxspring.animation.AnimationRunner", {
             statics: {
@@ -3506,9 +3725,9 @@
             if (animations.length === 0) stop();
         };
     },
-    "17": function(require, module, exports, global) {
+    "19": function(require, module, exports, global) {
         "use strict";
-        var bezier = require("18");
+        var bezier = require("1a");
         var Animation = boxspring.define("boxspring.animation.Animation", {
             inherits: boxspring.event.Emitter,
             properties: {
@@ -3651,7 +3870,7 @@
             return bezier(+equation[1], +equation[2], +equation[3], +equation[4], 1e3 / 60 / duration / 4);
         };
     },
-    "18": function(require, module, exports, global) {
+    "1a": function(require, module, exports, global) {
         module.exports = function(x1, y1, x2, y2, epsilon) {
             var curveX = function(t) {
                 var v = 1 - t;
@@ -3687,7 +3906,7 @@
             };
         };
     },
-    "19": function(require, module, exports, global) {
+    "1b": function(require, module, exports, global) {
         "use strict";
         var AnimationRunner = boxspring.animation.AnimationRunner;
         var AnimationGroup = boxspring.define("boxspring.animation.AnimationGroup", {
@@ -3729,7 +3948,7 @@
             }
         });
     },
-    "1a": function(require, module, exports, global) {
+    "1c": function(require, module, exports, global) {
         "use strict";
         var AnimationRunner = boxspring.animation.AnimationRunner;
         var ValueAnimation = boxspring.define("boxspring.animation.ValueAnimation", {
@@ -3761,7 +3980,7 @@
             onUpdate: function(value) {}
         });
     },
-    "1b": function(require, module, exports, global) {
+    "1d": function(require, module, exports, global) {
         "use strict";
         var ObjectAnimation = boxspring.define("boxspring.animation.ObjectAnimation", {
             inherits: boxspring.animation.ValueAnimation,
@@ -3779,7 +3998,7 @@
             }
         });
     },
-    "1c": function(require, module, exports, global) {
+    "1e": function(require, module, exports, global) {
         "use strict";
         var ViewPropertyAnimation = boxspring.define("boxspring.animation.ViewPropertyAnimation", {
             inherits: boxspring.animation.ValueAnimation,
@@ -3811,7 +4030,7 @@
             }
         });
     },
-    "1d": function(require, module, exports, global) {
+    "1f": function(require, module, exports, global) {
         "use strict";
         var AnimationRunner = boxspring.animation.AnimationRunner;
         var PropertyAnimation = boxspring.animation.PropertyAnimation;
@@ -3907,13 +4126,13 @@
         });
         var instances = [];
     },
-    "1e": function(require, module, exports, global) {
+    "1g": function(require, module, exports, global) {
         "use strict";
-        require("1f");
-        require("1g");
         require("1h");
+        require("1i");
+        require("1j");
     },
-    "1f": function(require, module, exports, global) {
+    "1h": function(require, module, exports, global) {
         "use strict";
         var Layout = boxspring.define("boxspring.layout.Layout", {
             properties: {
@@ -3934,7 +4153,7 @@
             layout: function() {}
         });
     },
-    "1g": function(require, module, exports, global) {
+    "1i": function(require, module, exports, global) {
         "use strict";
         var FixedLayout = boxspring.define("boxspring.layout.FixedLayout", {
             inherits: boxspring.layout.Layout,
@@ -3998,7 +4217,7 @@
             }
         });
     },
-    "1h": function(require, module, exports, global) {
+    "1j": function(require, module, exports, global) {
         "use strict";
         var FlexibleLayout = boxspring.define("boxspring.layout.FlexibleLayout", {
             inherits: boxspring.layout.FixedLayout,
@@ -4279,14 +4498,16 @@
             }
         });
     },
-    "1i": function(require, module, exports, global) {
+    "1k": function(require, module, exports, global) {
         "use strict";
-        require("1j");
-        require("1k");
         require("1l");
         require("1m");
+        require("1n");
+        require("1o");
+        require("1p");
+        require("1q");
     },
-    "1j": function(require, module, exports, global) {
+    "1l": function(require, module, exports, global) {
         "use strict";
         var View = boxspring.define("boxspring.view.View", {
             inherits: boxspring.event.Emitter,
@@ -4395,6 +4616,9 @@
                         return value;
                     }
                 },
+                overflow: {
+                    value: "hidden"
+                },
                 margin: {
                     value: function() {
                         return new boxspring.geom.Thickness;
@@ -4424,14 +4648,6 @@
                 position: {
                     value: function() {
                         return new boxspring.geom.Position("auto");
-                    },
-                    onSet: function(value) {
-                        if (value === "auto") {
-                            this.position.top = value;
-                            this.position.left = value;
-                            this.position.right = value;
-                            this.position.bottom = value;
-                        }
                     }
                 },
                 weight: {
@@ -4822,7 +5038,7 @@
             e.source.destroy();
         };
     },
-    "1k": function(require, module, exports, global) {
+    "1m": function(require, module, exports, global) {
         "use strict";
         var View = boxspring.override("boxspring.view.View", {
             destroy: function() {
@@ -4854,17 +5070,27 @@
                 updateDisplayWithMask(this, REDRAW_UPDATE_MASK);
                 return this;
             },
+            scheduleRender: function() {
+                updateDisplayWithMask(this, RENDER_UPDATE_MASK);
+            },
             redraw: function(context) {
                 this.__redrawBackground(context);
                 this.__redrawBorder(context);
                 this.__redrawShadow(context);
                 return this;
             },
+            composite: function(context, buffer) {
+                var sizeX = this.animatedPropertyValue("measuredSize.x");
+                var sizeY = this.animatedPropertyValue("measuredSize.y");
+                var offsetX = this.animatedPropertyValue("measuredOffset.x");
+                var offsetY = this.animatedPropertyValue("measuredOffset.y");
+                context.drawImage(buffer, 0, 0, buffer.width, buffer.height, offsetX, offsetY, sizeX, sizeY);
+            },
             onPropertyChange: function(target, property, newValue, oldValue, e) {
                 if (property === "shadowBlur" || property === "shadowColor" || property === "shadowOffset" || property === "shadowOffset.x" || property === "shadowOffset.y") {
                     updateDisplayWithMask(this, REDRAW_SHADOW_UPDATE_MASK);
                 }
-                if (property === "measuredSize" || property === "measuredSize.x" || property === "measuredSize.y" || property === "measuredOffset" || property === "measuredOffset.x" || property === "measuredOffset.y" || property === "opacity" || property === "transform") {
+                if (property === "measuredSize" || property === "measuredSize.x" || property === "measuredSize.y" || property === "measuredOffset" || property === "measuredOffset.x" || property === "measuredOffset.y" || property === "opacity" || property === "transform" || property === "overflow") {
                     updateDisplayWithMask(this, RENDER_UPDATE_MASK);
                 }
                 View.parent.onPropertyChange.call(this, target, property, newValue, oldValue, e);
@@ -5023,7 +5249,7 @@
             screen.save();
             screen.globalAlpha = screen.globalAlpha * view.animatedPropertyValue("opacity");
             if (sizeX > 0 && sizeY > 0 && cache.width > 0 && cache.height > 0) {
-                screen.drawImage(cache, 0, 0, cache.width, cache.height, offsetX, offsetY, sizeX, sizeY);
+                view.composite(screen, cache);
             }
             screen.translate(offsetX, offsetY);
             var children = view.__children;
@@ -5064,7 +5290,815 @@
             });
         });
     },
-    "1l": function(require, module, exports, global) {
+    "1n": function(require, module, exports, global) {
+        "use strict";
+        var ScrollView = boxspring.define("boxspring.view.ScrollView", {
+            inherits: boxspring.view.View,
+            properties: {
+                contentSize: {
+                    value: function() {
+                        return new boxspring.geom.Size;
+                    }
+                },
+                contentOffset: {
+                    value: function() {
+                        return new boxspring.geom.Point;
+                    }
+                }
+            },
+            constructor: function() {
+                ScrollView.parent.constructor.call(this);
+                var onPropertyChange = this.bind("onPropertyChange");
+                this.on("propertychange", "contentSize.x", onPropertyChange);
+                this.on("propertychange", "contentSize.y", onPropertyChange);
+                this.on("propertychange", "contentOffset.x", onPropertyChange);
+                this.on("propertychange", "contentOffset.y", onPropertyChange);
+                this.overflow = "hidden";
+                return this;
+            },
+            layout: function() {
+                if (this.contentLayout) {
+                    this.contentLayout.view = this;
+                    this.contentLayout.size.x = this.contentSize.x === "fill" ? this.measuredSize.x : this.contentSize.x;
+                    this.contentLayout.size.y = this.contentSize.y === "fill" ? this.measuredSize.y : this.contentSize.y;
+                    this.contentLayout.layout();
+                }
+                return this;
+            }
+        });
+    },
+    "1o": function(require, module, exports, global) {
+        "use strict";
+        var ScrollView = boxspring.override("boxspring.view.ScrollView", {
+            scroller: null,
+            constructor: function() {
+                ScrollView.parent.constructor.call(this);
+                var self = this;
+                this.scroller = new Scroller(function(x, y, zoom) {
+                    self.contentOffset.x = -x;
+                    self.contentOffset.y = -y;
+                });
+                return this;
+            },
+            composite: function(context, buffer) {
+                ScrollView.parent.composite.call(this, context, buffer);
+                context.translate(this.contentOffset.x, this.contentOffset.y);
+            },
+            onPropertyChange: function(target, property, oldValue, newValue) {
+                ScrollView.parent.onPropertyChange.call(this, target, property, oldValue, newValue);
+                if (property === "contentSize.x" || property === "contentSize.y") {
+                    this.scheduleLayout();
+                    this.scroller.setDimensions(this.measuredSize.x, this.measuredSize.y, this.contentSize.x, this.contentSize.y);
+                }
+                if (property === "measuredSize.x" || property === "measuredSize.y") {
+                    this.scroller.setDimensions(this.measuredSize.x, this.measuredSize.y, this.contentSize.x, this.contentSize.y);
+                }
+                if (property === "contentOffset.x" || property === "contentOffset.y") {
+                    this.scheduleReflow();
+                }
+            },
+            onTouchStart: function(touches, e) {
+                var ts = _.map(touches, function(touch) {
+                    return {
+                        pageX: touch.location.x,
+                        pageY: touch.location.y
+                    };
+                });
+                this.scroller.doTouchStart(ts, Date.now());
+            },
+            onTouchMove: function(touches, e) {
+                var ts = _.map(touches, function(touch) {
+                    return {
+                        pageX: touch.location.x,
+                        pageY: touch.location.y
+                    };
+                });
+                this.scroller.doTouchMove(ts, Date.now());
+            },
+            onTouchEnd: function(touches, e) {
+                var ts = _.map(touches, function(touch) {
+                    return {
+                        pageX: touch.location.x,
+                        pageY: touch.location.y
+                    };
+                });
+                console.log("Touch End");
+                this.scroller.doTouchEnd(Date.now());
+            }
+        });
+        var Scroller;
+        (function() {
+            var NOOP = function() {};
+            Scroller = function(callback, options) {
+                this.__callback = callback;
+                this.options = {
+                    scrollingX: true,
+                    scrollingY: true,
+                    animating: true,
+                    animationDuration: 250,
+                    bouncing: true,
+                    locking: true,
+                    paging: false,
+                    snapping: false,
+                    zooming: false,
+                    minZoom: .5,
+                    maxZoom: 3,
+                    speedMultiplier: 1,
+                    scrollingComplete: NOOP,
+                    penetrationDeceleration: .03,
+                    penetrationAcceleration: .08
+                };
+                for (var key in options) {
+                    this.options[key] = options[key];
+                }
+            };
+            var easeOutCubic = function(pos) {
+                return Math.pow(pos - 1, 3) + 1;
+            };
+            var easeInOutCubic = function(pos) {
+                if ((pos /= .5) < 1) {
+                    return .5 * Math.pow(pos, 3);
+                }
+                return .5 * (Math.pow(pos - 2, 3) + 2);
+            };
+            var members = {
+                __isSingleTouch: false,
+                __isTracking: false,
+                __didDecelerationComplete: false,
+                __isGesturing: false,
+                __isDragging: false,
+                __isDecelerating: false,
+                __isAnimating: false,
+                __clientLeft: 0,
+                __clientTop: 0,
+                __clientWidth: 0,
+                __clientHeight: 0,
+                __contentWidth: 0,
+                __contentHeight: 0,
+                __snapWidth: 100,
+                __snapHeight: 100,
+                __refreshHeight: null,
+                __refreshActive: false,
+                __refreshActivate: null,
+                __refreshDeactivate: null,
+                __refreshStart: null,
+                __zoomLevel: 1,
+                __scrollLeft: 0,
+                __scrollTop: 0,
+                __maxScrollLeft: 0,
+                __maxScrollTop: 0,
+                __scheduledLeft: 0,
+                __scheduledTop: 0,
+                __scheduledZoom: 0,
+                __lastTouchLeft: null,
+                __lastTouchTop: null,
+                __lastTouchMove: null,
+                __positions: null,
+                __minDecelerationScrollLeft: null,
+                __minDecelerationScrollTop: null,
+                __maxDecelerationScrollLeft: null,
+                __maxDecelerationScrollTop: null,
+                __decelerationVelocityX: null,
+                __decelerationVelocityY: null,
+                setDimensions: function(clientWidth, clientHeight, contentWidth, contentHeight) {
+                    var self = this;
+                    if (clientWidth === +clientWidth) {
+                        self.__clientWidth = clientWidth;
+                    }
+                    if (clientHeight === +clientHeight) {
+                        self.__clientHeight = clientHeight;
+                    }
+                    if (contentWidth === +contentWidth) {
+                        self.__contentWidth = contentWidth;
+                    }
+                    if (contentHeight === +contentHeight) {
+                        self.__contentHeight = contentHeight;
+                    }
+                    self.__computeScrollMax();
+                    self.scrollTo(self.__scrollLeft, self.__scrollTop, true);
+                },
+                setPosition: function(left, top) {
+                    var self = this;
+                    self.__clientLeft = left || 0;
+                    self.__clientTop = top || 0;
+                },
+                setSnapSize: function(width, height) {
+                    var self = this;
+                    self.__snapWidth = width;
+                    self.__snapHeight = height;
+                },
+                activatePullToRefresh: function(height, activateCallback, deactivateCallback, startCallback) {
+                    var self = this;
+                    self.__refreshHeight = height;
+                    self.__refreshActivate = activateCallback;
+                    self.__refreshDeactivate = deactivateCallback;
+                    self.__refreshStart = startCallback;
+                },
+                finishPullToRefresh: function() {
+                    var self = this;
+                    self.__refreshActive = false;
+                    if (self.__refreshDeactivate) {
+                        self.__refreshDeactivate();
+                    }
+                    self.scrollTo(self.__scrollLeft, self.__scrollTop, true);
+                },
+                getValues: function() {
+                    var self = this;
+                    return {
+                        left: self.__scrollLeft,
+                        top: self.__scrollTop,
+                        zoom: self.__zoomLevel
+                    };
+                },
+                getScrollMax: function() {
+                    var self = this;
+                    return {
+                        left: self.__maxScrollLeft,
+                        top: self.__maxScrollTop
+                    };
+                },
+                zoomTo: function(level, animate, originLeft, originTop) {
+                    var self = this;
+                    if (!self.options.zooming) {
+                        throw new Error("Zooming is not enabled!");
+                    }
+                    if (self.__isDecelerating) {
+                        core.effect.Animate.stop(self.__isDecelerating);
+                        self.__isDecelerating = false;
+                    }
+                    var oldLevel = self.__zoomLevel;
+                    if (originLeft == null) {
+                        originLeft = self.__clientWidth / 2;
+                    }
+                    if (originTop == null) {
+                        originTop = self.__clientHeight / 2;
+                    }
+                    level = Math.max(Math.min(level, self.options.maxZoom), self.options.minZoom);
+                    self.__computeScrollMax(level);
+                    var left = (originLeft + self.__scrollLeft) * level / oldLevel - originLeft;
+                    var top = (originTop + self.__scrollTop) * level / oldLevel - originTop;
+                    if (left > self.__maxScrollLeft) {
+                        left = self.__maxScrollLeft;
+                    } else if (left < 0) {
+                        left = 0;
+                    }
+                    if (top > self.__maxScrollTop) {
+                        top = self.__maxScrollTop;
+                    } else if (top < 0) {
+                        top = 0;
+                    }
+                    self.__publish(left, top, level, animate);
+                },
+                zoomBy: function(factor, animate, originLeft, originTop) {
+                    var self = this;
+                    self.zoomTo(self.__zoomLevel * factor, animate, originLeft, originTop);
+                },
+                scrollTo: function(left, top, animate, zoom) {
+                    var self = this;
+                    if (self.__isDecelerating) {
+                        core.effect.Animate.stop(self.__isDecelerating);
+                        self.__isDecelerating = false;
+                    }
+                    if (zoom != null && zoom !== self.__zoomLevel) {
+                        if (!self.options.zooming) {
+                            throw new Error("Zooming is not enabled!");
+                        }
+                        left *= zoom;
+                        top *= zoom;
+                        self.__computeScrollMax(zoom);
+                    } else {
+                        zoom = self.__zoomLevel;
+                    }
+                    if (!self.options.scrollingX) {
+                        left = self.__scrollLeft;
+                    } else {
+                        if (self.options.paging) {
+                            left = Math.round(left / self.__clientWidth) * self.__clientWidth;
+                        } else if (self.options.snapping) {
+                            left = Math.round(left / self.__snapWidth) * self.__snapWidth;
+                        }
+                    }
+                    if (!self.options.scrollingY) {
+                        top = self.__scrollTop;
+                    } else {
+                        if (self.options.paging) {
+                            top = Math.round(top / self.__clientHeight) * self.__clientHeight;
+                        } else if (self.options.snapping) {
+                            top = Math.round(top / self.__snapHeight) * self.__snapHeight;
+                        }
+                    }
+                    left = Math.max(Math.min(self.__maxScrollLeft, left), 0);
+                    top = Math.max(Math.min(self.__maxScrollTop, top), 0);
+                    if (left === self.__scrollLeft && top === self.__scrollTop) {
+                        animate = false;
+                    }
+                    self.__publish(left, top, zoom, animate);
+                },
+                scrollBy: function(left, top, animate) {
+                    var self = this;
+                    var startLeft = self.__isAnimating ? self.__scheduledLeft : self.__scrollLeft;
+                    var startTop = self.__isAnimating ? self.__scheduledTop : self.__scrollTop;
+                    self.scrollTo(startLeft + (left || 0), startTop + (top || 0), animate);
+                },
+                doMouseZoom: function(wheelDelta, timeStamp, pageX, pageY) {
+                    var self = this;
+                    var change = wheelDelta > 0 ? .97 : 1.03;
+                    return self.zoomTo(self.__zoomLevel * change, false, pageX - self.__clientLeft, pageY - self.__clientTop);
+                },
+                doTouchStart: function(touches, timeStamp) {
+                    if (touches.length == null) {
+                        throw new Error("Invalid touch list: " + touches);
+                    }
+                    if (timeStamp instanceof Date) {
+                        timeStamp = timeStamp.valueOf();
+                    }
+                    if (typeof timeStamp !== "number") {
+                        throw new Error("Invalid timestamp value: " + timeStamp);
+                    }
+                    var self = this;
+                    self.__interruptedAnimation = true;
+                    if (self.__isDecelerating) {
+                        core.effect.Animate.stop(self.__isDecelerating);
+                        self.__isDecelerating = false;
+                        self.__interruptedAnimation = true;
+                    }
+                    if (self.__isAnimating) {
+                        core.effect.Animate.stop(self.__isAnimating);
+                        self.__isAnimating = false;
+                        self.__interruptedAnimation = true;
+                    }
+                    var currentTouchLeft, currentTouchTop;
+                    var isSingleTouch = touches.length === 1;
+                    if (isSingleTouch) {
+                        currentTouchLeft = touches[0].pageX;
+                        currentTouchTop = touches[0].pageY;
+                    } else {
+                        currentTouchLeft = Math.abs(touches[0].pageX + touches[1].pageX) / 2;
+                        currentTouchTop = Math.abs(touches[0].pageY + touches[1].pageY) / 2;
+                    }
+                    self.__initialTouchLeft = currentTouchLeft;
+                    self.__initialTouchTop = currentTouchTop;
+                    self.__zoomLevelStart = self.__zoomLevel;
+                    self.__lastTouchLeft = currentTouchLeft;
+                    self.__lastTouchTop = currentTouchTop;
+                    self.__lastTouchMove = timeStamp;
+                    self.__lastScale = 1;
+                    self.__enableScrollX = !isSingleTouch && self.options.scrollingX;
+                    self.__enableScrollY = !isSingleTouch && self.options.scrollingY;
+                    self.__isTracking = true;
+                    self.__didDecelerationComplete = false;
+                    self.__isDragging = !isSingleTouch;
+                    self.__isSingleTouch = isSingleTouch;
+                    self.__positions = [];
+                },
+                doTouchMove: function(touches, timeStamp, scale) {
+                    if (touches.length == null) {
+                        throw new Error("Invalid touch list: " + touches);
+                    }
+                    if (timeStamp instanceof Date) {
+                        timeStamp = timeStamp.valueOf();
+                    }
+                    if (typeof timeStamp !== "number") {
+                        throw new Error("Invalid timestamp value: " + timeStamp);
+                    }
+                    var self = this;
+                    if (!self.__isTracking) {
+                        return;
+                    }
+                    var currentTouchLeft, currentTouchTop;
+                    if (touches.length === 2) {
+                        currentTouchLeft = Math.abs(touches[0].pageX + touches[1].pageX) / 2;
+                        currentTouchTop = Math.abs(touches[0].pageY + touches[1].pageY) / 2;
+                    } else {
+                        currentTouchLeft = touches[0].pageX;
+                        currentTouchTop = touches[0].pageY;
+                    }
+                    var positions = self.__positions;
+                    if (self.__isDragging) {
+                        var moveX = currentTouchLeft - self.__lastTouchLeft;
+                        var moveY = currentTouchTop - self.__lastTouchTop;
+                        var scrollLeft = self.__scrollLeft;
+                        var scrollTop = self.__scrollTop;
+                        var level = self.__zoomLevel;
+                        if (scale != null && self.options.zooming) {
+                            var oldLevel = level;
+                            level = level / self.__lastScale * scale;
+                            level = Math.max(Math.min(level, self.options.maxZoom), self.options.minZoom);
+                            if (oldLevel !== level) {
+                                var currentTouchLeftRel = currentTouchLeft - self.__clientLeft;
+                                var currentTouchTopRel = currentTouchTop - self.__clientTop;
+                                scrollLeft = (currentTouchLeftRel + scrollLeft) * level / oldLevel - currentTouchLeftRel;
+                                scrollTop = (currentTouchTopRel + scrollTop) * level / oldLevel - currentTouchTopRel;
+                                self.__computeScrollMax(level);
+                            }
+                        }
+                        if (self.__enableScrollX) {
+                            scrollLeft -= moveX * this.options.speedMultiplier;
+                            var maxScrollLeft = self.__maxScrollLeft;
+                            if (scrollLeft > maxScrollLeft || scrollLeft < 0) {
+                                if (self.options.bouncing) {
+                                    scrollLeft += moveX / 2 * this.options.speedMultiplier;
+                                } else if (scrollLeft > maxScrollLeft) {
+                                    scrollLeft = maxScrollLeft;
+                                } else {
+                                    scrollLeft = 0;
+                                }
+                            }
+                        }
+                        if (self.__enableScrollY) {
+                            scrollTop -= moveY * this.options.speedMultiplier;
+                            var maxScrollTop = self.__maxScrollTop;
+                            if (scrollTop > maxScrollTop || scrollTop < 0) {
+                                if (self.options.bouncing) {
+                                    scrollTop += moveY / 2 * this.options.speedMultiplier;
+                                    if (!self.__enableScrollX && self.__refreshHeight != null) {
+                                        if (!self.__refreshActive && scrollTop <= -self.__refreshHeight) {
+                                            self.__refreshActive = true;
+                                            if (self.__refreshActivate) {
+                                                self.__refreshActivate();
+                                            }
+                                        } else if (self.__refreshActive && scrollTop > -self.__refreshHeight) {
+                                            self.__refreshActive = false;
+                                            if (self.__refreshDeactivate) {
+                                                self.__refreshDeactivate();
+                                            }
+                                        }
+                                    }
+                                } else if (scrollTop > maxScrollTop) {
+                                    scrollTop = maxScrollTop;
+                                } else {
+                                    scrollTop = 0;
+                                }
+                            }
+                        }
+                        if (positions.length > 60) {
+                            positions.splice(0, 30);
+                        }
+                        positions.push(scrollLeft, scrollTop, timeStamp);
+                        self.__publish(scrollLeft, scrollTop, level);
+                    } else {
+                        var minimumTrackingForScroll = self.options.locking ? 3 : 0;
+                        var minimumTrackingForDrag = 5;
+                        var distanceX = Math.abs(currentTouchLeft - self.__initialTouchLeft);
+                        var distanceY = Math.abs(currentTouchTop - self.__initialTouchTop);
+                        self.__enableScrollX = self.options.scrollingX && distanceX >= minimumTrackingForScroll;
+                        self.__enableScrollY = self.options.scrollingY && distanceY >= minimumTrackingForScroll;
+                        positions.push(self.__scrollLeft, self.__scrollTop, timeStamp);
+                        self.__isDragging = (self.__enableScrollX || self.__enableScrollY) && (distanceX >= minimumTrackingForDrag || distanceY >= minimumTrackingForDrag);
+                        if (self.__isDragging) {
+                            self.__interruptedAnimation = false;
+                        }
+                    }
+                    self.__lastTouchLeft = currentTouchLeft;
+                    self.__lastTouchTop = currentTouchTop;
+                    self.__lastTouchMove = timeStamp;
+                    self.__lastScale = scale;
+                },
+                doTouchEnd: function(timeStamp) {
+                    if (timeStamp instanceof Date) {
+                        timeStamp = timeStamp.valueOf();
+                    }
+                    if (typeof timeStamp !== "number") {
+                        throw new Error("Invalid timestamp value: " + timeStamp);
+                    }
+                    var self = this;
+                    if (!self.__isTracking) {
+                        return;
+                    }
+                    self.__isTracking = false;
+                    if (self.__isDragging) {
+                        self.__isDragging = false;
+                        if (self.__isSingleTouch && self.options.animating && timeStamp - self.__lastTouchMove <= 100) {
+                            var positions = self.__positions;
+                            var endPos = positions.length - 1;
+                            var startPos = endPos;
+                            for (var i = endPos; i > 0 && positions[i] > self.__lastTouchMove - 100; i -= 3) {
+                                startPos = i;
+                            }
+                            if (startPos !== endPos) {
+                                var timeOffset = positions[endPos] - positions[startPos];
+                                var movedLeft = self.__scrollLeft - positions[startPos - 2];
+                                var movedTop = self.__scrollTop - positions[startPos - 1];
+                                self.__decelerationVelocityX = movedLeft / timeOffset * (1e3 / 60);
+                                self.__decelerationVelocityY = movedTop / timeOffset * (1e3 / 60);
+                                var minVelocityToStartDeceleration = self.options.paging || self.options.snapping ? 4 : 1;
+                                if (Math.abs(self.__decelerationVelocityX) > minVelocityToStartDeceleration || Math.abs(self.__decelerationVelocityY) > minVelocityToStartDeceleration) {
+                                    if (!self.__refreshActive) {
+                                        self.__startDeceleration(timeStamp);
+                                    }
+                                }
+                            } else {
+                                self.options.scrollingComplete();
+                            }
+                        } else if (timeStamp - self.__lastTouchMove > 100) {
+                            self.options.scrollingComplete();
+                        }
+                    }
+                    if (!self.__isDecelerating) {
+                        if (self.__refreshActive && self.__refreshStart) {
+                            self.__publish(self.__scrollLeft, -self.__refreshHeight, self.__zoomLevel, true);
+                            if (self.__refreshStart) {
+                                self.__refreshStart();
+                            }
+                        } else {
+                            if (self.__interruptedAnimation || self.__isDragging) {
+                                self.options.scrollingComplete();
+                            }
+                            self.scrollTo(self.__scrollLeft, self.__scrollTop, true, self.__zoomLevel);
+                            if (self.__refreshActive) {
+                                self.__refreshActive = false;
+                                if (self.__refreshDeactivate) {
+                                    self.__refreshDeactivate();
+                                }
+                            }
+                        }
+                    }
+                    self.__positions.length = 0;
+                },
+                __publish: function(left, top, zoom, animate) {
+                    var self = this;
+                    var wasAnimating = self.__isAnimating;
+                    if (wasAnimating) {
+                        core.effect.Animate.stop(wasAnimating);
+                        self.__isAnimating = false;
+                    }
+                    if (animate && self.options.animating) {
+                        self.__scheduledLeft = left;
+                        self.__scheduledTop = top;
+                        self.__scheduledZoom = zoom;
+                        var oldLeft = self.__scrollLeft;
+                        var oldTop = self.__scrollTop;
+                        var oldZoom = self.__zoomLevel;
+                        var diffLeft = left - oldLeft;
+                        var diffTop = top - oldTop;
+                        var diffZoom = zoom - oldZoom;
+                        var step = function(percent, now, render) {
+                            if (render) {
+                                self.__scrollLeft = oldLeft + diffLeft * percent;
+                                self.__scrollTop = oldTop + diffTop * percent;
+                                self.__zoomLevel = oldZoom + diffZoom * percent;
+                                if (self.__callback) {
+                                    self.__callback(self.__scrollLeft, self.__scrollTop, self.__zoomLevel);
+                                }
+                            }
+                        };
+                        var verify = function(id) {
+                            return self.__isAnimating === id;
+                        };
+                        var completed = function(renderedFramesPerSecond, animationId, wasFinished) {
+                            if (animationId === self.__isAnimating) {
+                                self.__isAnimating = false;
+                            }
+                            if (self.__didDecelerationComplete || wasFinished) {
+                                self.options.scrollingComplete();
+                            }
+                            if (self.options.zooming) {
+                                self.__computeScrollMax();
+                            }
+                        };
+                        self.__isAnimating = core.effect.Animate.start(step, verify, completed, self.options.animationDuration, wasAnimating ? easeOutCubic : easeInOutCubic);
+                    } else {
+                        self.__scheduledLeft = self.__scrollLeft = left;
+                        self.__scheduledTop = self.__scrollTop = top;
+                        self.__scheduledZoom = self.__zoomLevel = zoom;
+                        if (self.__callback) {
+                            self.__callback(left, top, zoom);
+                        }
+                        if (self.options.zooming) {
+                            self.__computeScrollMax();
+                        }
+                    }
+                },
+                __computeScrollMax: function(zoomLevel) {
+                    var self = this;
+                    if (zoomLevel == null) {
+                        zoomLevel = self.__zoomLevel;
+                    }
+                    self.__maxScrollLeft = Math.max(self.__contentWidth * zoomLevel - self.__clientWidth, 0);
+                    self.__maxScrollTop = Math.max(self.__contentHeight * zoomLevel - self.__clientHeight, 0);
+                },
+                __startDeceleration: function(timeStamp) {
+                    var self = this;
+                    if (self.options.paging) {
+                        var scrollLeft = Math.max(Math.min(self.__scrollLeft, self.__maxScrollLeft), 0);
+                        var scrollTop = Math.max(Math.min(self.__scrollTop, self.__maxScrollTop), 0);
+                        var clientWidth = self.__clientWidth;
+                        var clientHeight = self.__clientHeight;
+                        self.__minDecelerationScrollLeft = Math.floor(scrollLeft / clientWidth) * clientWidth;
+                        self.__minDecelerationScrollTop = Math.floor(scrollTop / clientHeight) * clientHeight;
+                        self.__maxDecelerationScrollLeft = Math.ceil(scrollLeft / clientWidth) * clientWidth;
+                        self.__maxDecelerationScrollTop = Math.ceil(scrollTop / clientHeight) * clientHeight;
+                    } else {
+                        self.__minDecelerationScrollLeft = 0;
+                        self.__minDecelerationScrollTop = 0;
+                        self.__maxDecelerationScrollLeft = self.__maxScrollLeft;
+                        self.__maxDecelerationScrollTop = self.__maxScrollTop;
+                    }
+                    var step = function(percent, now, render) {
+                        self.__stepThroughDeceleration(render);
+                    };
+                    var minVelocityToKeepDecelerating = self.options.snapping ? 4 : .1;
+                    var verify = function() {
+                        var shouldContinue = Math.abs(self.__decelerationVelocityX) >= minVelocityToKeepDecelerating || Math.abs(self.__decelerationVelocityY) >= minVelocityToKeepDecelerating;
+                        if (!shouldContinue) {
+                            self.__didDecelerationComplete = true;
+                        }
+                        return shouldContinue;
+                    };
+                    var completed = function(renderedFramesPerSecond, animationId, wasFinished) {
+                        self.__isDecelerating = false;
+                        if (self.__didDecelerationComplete) {
+                            self.options.scrollingComplete();
+                        }
+                        self.scrollTo(self.__scrollLeft, self.__scrollTop, self.options.snapping);
+                    };
+                    self.__isDecelerating = core.effect.Animate.start(step, verify, completed);
+                },
+                __stepThroughDeceleration: function(render) {
+                    var self = this;
+                    var scrollLeft = self.__scrollLeft + self.__decelerationVelocityX;
+                    var scrollTop = self.__scrollTop + self.__decelerationVelocityY;
+                    if (!self.options.bouncing) {
+                        var scrollLeftFixed = Math.max(Math.min(self.__maxDecelerationScrollLeft, scrollLeft), self.__minDecelerationScrollLeft);
+                        if (scrollLeftFixed !== scrollLeft) {
+                            scrollLeft = scrollLeftFixed;
+                            self.__decelerationVelocityX = 0;
+                        }
+                        var scrollTopFixed = Math.max(Math.min(self.__maxDecelerationScrollTop, scrollTop), self.__minDecelerationScrollTop);
+                        if (scrollTopFixed !== scrollTop) {
+                            scrollTop = scrollTopFixed;
+                            self.__decelerationVelocityY = 0;
+                        }
+                    }
+                    if (render) {
+                        self.__publish(scrollLeft, scrollTop, self.__zoomLevel);
+                    } else {
+                        self.__scrollLeft = scrollLeft;
+                        self.__scrollTop = scrollTop;
+                    }
+                    if (!self.options.paging) {
+                        var frictionFactor = .95;
+                        self.__decelerationVelocityX *= frictionFactor;
+                        self.__decelerationVelocityY *= frictionFactor;
+                    }
+                    if (self.options.bouncing) {
+                        var scrollOutsideX = 0;
+                        var scrollOutsideY = 0;
+                        var penetrationDeceleration = self.options.penetrationDeceleration;
+                        var penetrationAcceleration = self.options.penetrationAcceleration;
+                        if (scrollLeft < self.__minDecelerationScrollLeft) {
+                            scrollOutsideX = self.__minDecelerationScrollLeft - scrollLeft;
+                        } else if (scrollLeft > self.__maxDecelerationScrollLeft) {
+                            scrollOutsideX = self.__maxDecelerationScrollLeft - scrollLeft;
+                        }
+                        if (scrollTop < self.__minDecelerationScrollTop) {
+                            scrollOutsideY = self.__minDecelerationScrollTop - scrollTop;
+                        } else if (scrollTop > self.__maxDecelerationScrollTop) {
+                            scrollOutsideY = self.__maxDecelerationScrollTop - scrollTop;
+                        }
+                        if (scrollOutsideX !== 0) {
+                            if (scrollOutsideX * self.__decelerationVelocityX <= 0) {
+                                self.__decelerationVelocityX += scrollOutsideX * penetrationDeceleration;
+                            } else {
+                                self.__decelerationVelocityX = scrollOutsideX * penetrationAcceleration;
+                            }
+                        }
+                        if (scrollOutsideY !== 0) {
+                            if (scrollOutsideY * self.__decelerationVelocityY <= 0) {
+                                self.__decelerationVelocityY += scrollOutsideY * penetrationDeceleration;
+                            } else {
+                                self.__decelerationVelocityY = scrollOutsideY * penetrationAcceleration;
+                            }
+                        }
+                    }
+                }
+            };
+            for (var key in members) {
+                Scroller.prototype[key] = members[key];
+            }
+        })();
+        (function(global) {
+            var time = Date.now || function() {
+                return +(new Date);
+            };
+            var desiredFrames = 60;
+            var millisecondsPerSecond = 1e3;
+            var running = {};
+            var counter = 1;
+            if (!global.core) {
+                global.core = {
+                    effect: {}
+                };
+            } else if (!core.effect) {
+                core.effect = {};
+            }
+            core.effect.Animate = {
+                requestAnimationFrame: function() {
+                    var requestFrame = global.requestAnimationFrame || global.webkitRequestAnimationFrame || global.mozRequestAnimationFrame || global.oRequestAnimationFrame;
+                    var isNative = !!requestFrame;
+                    if (requestFrame && !/requestAnimationFrame\(\)\s*\{\s*\[native code\]\s*\}/i.test(requestFrame.toString())) {
+                        isNative = false;
+                    }
+                    if (isNative) {
+                        return function(callback, root) {
+                            requestFrame(callback, root);
+                        };
+                    }
+                    var TARGET_FPS = 60;
+                    var requests = {};
+                    var requestCount = 0;
+                    var rafHandle = 1;
+                    var intervalHandle = null;
+                    var lastActive = +(new Date);
+                    return function(callback, root) {
+                        var callbackHandle = rafHandle++;
+                        requests[callbackHandle] = callback;
+                        requestCount++;
+                        if (intervalHandle === null) {
+                            intervalHandle = setInterval(function() {
+                                var time = +(new Date);
+                                var currentRequests = requests;
+                                requests = {};
+                                requestCount = 0;
+                                for (var key in currentRequests) {
+                                    if (currentRequests.hasOwnProperty(key)) {
+                                        currentRequests[key](time);
+                                        lastActive = time;
+                                    }
+                                }
+                                if (time - lastActive > 2500) {
+                                    clearInterval(intervalHandle);
+                                    intervalHandle = null;
+                                }
+                            }, 1e3 / TARGET_FPS);
+                        }
+                        return callbackHandle;
+                    };
+                }(),
+                stop: function(id) {
+                    var cleared = running[id] != null;
+                    if (cleared) {
+                        running[id] = null;
+                    }
+                    return cleared;
+                },
+                isRunning: function(id) {
+                    return running[id] != null;
+                },
+                start: function(stepCallback, verifyCallback, completedCallback, duration, easingMethod, root) {
+                    var start = time();
+                    var lastFrame = start;
+                    var percent = 0;
+                    var dropCounter = 0;
+                    var id = counter++;
+                    if (!root) {
+                        root = document.body;
+                    }
+                    if (id % 20 === 0) {
+                        var newRunning = {};
+                        for (var usedId in running) {
+                            newRunning[usedId] = true;
+                        }
+                        running = newRunning;
+                    }
+                    var step = function(virtual) {
+                        var render = virtual !== true;
+                        var now = time();
+                        if (!running[id] || verifyCallback && !verifyCallback(id)) {
+                            running[id] = null;
+                            completedCallback && completedCallback(desiredFrames - dropCounter / ((now - start) / millisecondsPerSecond), id, false);
+                            return;
+                        }
+                        if (render) {
+                            var droppedFrames = Math.round((now - lastFrame) / (millisecondsPerSecond / desiredFrames)) - 1;
+                            for (var j = 0; j < Math.min(droppedFrames, 4); j++) {
+                                step(true);
+                                dropCounter++;
+                            }
+                        }
+                        if (duration) {
+                            percent = (now - start) / duration;
+                            if (percent > 1) {
+                                percent = 1;
+                            }
+                        }
+                        var value = easingMethod ? easingMethod(percent) : percent;
+                        if ((stepCallback(value, now, render) === false || percent === 1) && render) {
+                            running[id] = null;
+                            completedCallback && completedCallback(desiredFrames - dropCounter / ((now - start) / millisecondsPerSecond), id, percent === 1 || duration == null);
+                        } else if (render) {
+                            lastFrame = now;
+                            core.effect.Animate.requestAnimationFrame(step, root);
+                        }
+                    };
+                    running[id] = true;
+                    core.effect.Animate.requestAnimationFrame(step, root);
+                    return id;
+                }
+            };
+        })(global);
+    },
+    "1p": function(require, module, exports, global) {
         "use strict";
         var Window = boxspring.define("boxspring.view.Window", {
             inherits: boxspring.view.View,
@@ -5093,7 +6127,7 @@
         });
         var instance = null;
     },
-    "1m": function(require, module, exports, global) {
+    "1q": function(require, module, exports, global) {
         "use strict";
         var Window = boxspring.override("boxspring.view.Window", {
             constructor: function() {
