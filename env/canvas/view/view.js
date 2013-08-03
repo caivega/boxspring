@@ -73,7 +73,6 @@ var View = boxspring.override('boxspring.view.View', {
 	 * @since 0.9
 	 */
 	redraw: function(context) {
-		console.log('Redraw')
 		this.__redrawBackground(context)
 		this.__redrawBorder(context)
 		this.__redrawShadow(context)
@@ -81,7 +80,6 @@ var View = boxspring.override('boxspring.view.View', {
 	},
 
 	layout: function() {
-		console.log('Layout')
 		View.parent.layout.call(this)
 	},
 
@@ -367,6 +365,9 @@ var updateDisplay = function() {
 	if (root == null)
 		return
 
+	console.time('Rendering')
+	//console.profile('Rendering')
+
 	if (root.size.x === 'auto') root.measuredSize.x = window.innerWidth
 	if (root.size.y === 'auto') root.measuredSize.y = window.innerHeight
 
@@ -382,6 +383,10 @@ var updateDisplay = function() {
 
 	updateDisplayViews = {}
 	updateDisplayMasks = {}
+
+	console.timeEnd('Rendering')
+
+	//console.profileEnd()
 
 	if (!lastCalledTime) {
 		lastCalledTime = new Date().getTime();
@@ -406,6 +411,8 @@ var composite = function(view, screen) {
 		view.layoutIfNeeded()
 	}
 
+	var test = view.get('measuredSize.x')
+
 	var sizeX = view.animatedPropertyValue('measuredSize.x')
 	var sizeY = view.animatedPropertyValue('measuredSize.y')
 	var offsetX = view.animatedPropertyValue('measuredOffset.x')
@@ -424,29 +431,22 @@ var composite = function(view, screen) {
 	}
 
 	if (mask & REDRAW_UPDATE_MASK) {
-
 		var context = cache.getContext('2d')
 		context.save()
-		context.clearRect(
-			0, 0,
-			view.measuredSize.x,
-			view.measuredSize.y
-		)
-
+		context.clearRect(0, 0, view.measuredSize.x, view.measuredSize.y)
 		view.redrawIfNeeded(context)
-
 		context.restore()
 	}
 
 	screen.save()
 	screen.globalAlpha = screen.globalAlpha * view.animatedPropertyValue('opacity');
 
-	// if (view.overflow === 'hidden') {
-	// 	screen.rect(offsetX, offsetY, sizeX, sizeY)
-	// 	screen.clip()
-	// }
+	if (view.overflow === 'hidden') {
+		screen.rect(offsetX, offsetY, sizeX, sizeY)
+		screen.clip()
+	}
 
-	if (sizeX > 0 && sizeY  > 0 && cache.width > 0 && cache.height > 0) {
+	if (sizeX > 0 && sizeY > 0 && cache.width > 0 && cache.height > 0) {
 		view.composite(screen, cache)
 	}
 
@@ -458,6 +458,7 @@ var composite = function(view, screen) {
 	}
 
 	screen.restore()
+
 }
 
 /**

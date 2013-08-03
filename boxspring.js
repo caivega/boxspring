@@ -3322,6 +3322,7 @@
                 RenderLoop.parent.constructor.apply(this, arguments);
                 this.__levels = [];
                 this.__queues = {};
+                this.__cb = this.bind("loop");
                 return this;
             },
             destroy: function() {
@@ -3342,7 +3343,7 @@
                 if (index > -1) return this;
                 queue.push(action);
                 if (this.__request == null) {
-                    this.__request = requestFrame(this.bind("loop"));
+                    this.__request = requestFrame(this.__cb);
                 }
                 if (this.__processing && this.__processingLevel >= level) {
                     this.__reschedule = true;
@@ -3361,7 +3362,7 @@
                     }
                 }
                 if (this.__actions === 0) {
-                    this.__request = cancelFrame(this.bind("loop"));
+                    this.__request = cancelFrame(this.__cb);
                 }
                 return this;
             },
@@ -3388,7 +3389,7 @@
                 this.__processingLevel = null;
                 if (this.__reschedule) {
                     this.__reschedule = false;
-                    this.__request = requestFrame(this.bind("loop"));
+                    this.__request = requestFrame(this.__cb);
                 } else {
                     this.__request = null;
                 }
@@ -5074,14 +5075,12 @@
                 updateDisplayWithMask(this, RENDER_UPDATE_MASK);
             },
             redraw: function(context) {
-                console.log("Redraw");
                 this.__redrawBackground(context);
                 this.__redrawBorder(context);
                 this.__redrawShadow(context);
                 return this;
             },
             layout: function() {
-                console.log("Layout");
                 View.parent.layout.call(this);
             },
             composite: function(context, buffer) {
@@ -5208,12 +5207,14 @@
                 if (root) break;
             }
             if (root == null) return;
+            console.time("Rendering");
             if (root.size.x === "auto") root.measuredSize.x = window.innerWidth;
             if (root.size.y === "auto") root.measuredSize.y = window.innerHeight;
             screenContext.clearRect(0, 0, screenCanvas.width, screenCanvas.height);
             composite(root, screenContext);
             updateDisplayViews = {};
             updateDisplayMasks = {};
+            console.timeEnd("Rendering");
             if (!lastCalledTime) {
                 lastCalledTime = (new Date).getTime();
                 fps = 0;
@@ -5229,6 +5230,7 @@
             if (mask & LAYOUT_UPDATE_MASK) {
                 view.layoutIfNeeded();
             }
+            var test = view.get("measuredSize.x");
             var sizeX = view.animatedPropertyValue("measuredSize.x");
             var sizeY = view.animatedPropertyValue("measuredSize.y");
             var offsetX = view.animatedPropertyValue("measuredOffset.x");
@@ -5253,6 +5255,10 @@
             }
             screen.save();
             screen.globalAlpha = screen.globalAlpha * view.animatedPropertyValue("opacity");
+            if (view.overflow === "hidden") {
+                screen.rect(offsetX, offsetY, sizeX, sizeY);
+                screen.clip();
+            }
             if (sizeX > 0 && sizeY > 0 && cache.width > 0 && cache.height > 0) {
                 view.composite(screen, cache);
             }

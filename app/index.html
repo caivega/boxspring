@@ -33,6 +33,7 @@
 
 		var root = boxspring.view.Window.instance()
 		root.name = 'Window'
+		root.backgroundColor = 'rgba(200, 200, 200, 1)'
 		root.size.x = 'auto'
 		root.size.y = 'auto'
 
@@ -83,24 +84,17 @@
 		scrollview.contentSize.x = 'fill'
 		scrollview.contentSize.y = 500
 
-		for (var i = 0; i < 50; i++) {
+		for (var i = 0; i < 100; i++) {
 			var view = createView()
 			view.name = 'View' + i
 			view.size.x = 'fill'
 			view.size.y = 100
-
 			view.padding = 20
-
 			var sub = createView()
 			sub.backgroundColor = 'rgba(255, 255, 255, 0.5)'
 			view.addChild(sub)
-
 			scrollview.addChild(view)
-
-
-
 		}
-
 
 		document.addEventListener('touchstart', function(e) {
 			e.preventDefault()
