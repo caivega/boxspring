@@ -19,6 +19,7 @@
 	<script type="text/javascript" src="../boxspring.js"></script>
 	<script type="text/javascript">
 
+
 		var View   = boxspring.view.View
 		var Window = boxspring.view.Window
 
@@ -79,10 +80,11 @@
 
 		var scrollview = new boxspring.view.ScrollView()
 		scrollview.backgroundColor = 'rgba(255, 0, 0, 0.5)'
+		scrollview.name = 'Scroll View'
 		root.addChild(scrollview)
 
 		scrollview.contentSize.x = 'fill'
-		scrollview.contentSize.y = 500
+		scrollview.contentSize.y = 10000
 
 		for (var i = 0; i < 100; i++) {
 			var view = createView()
@@ -90,15 +92,30 @@
 			view.size.x = 'fill'
 			view.size.y = 100
 			view.padding = 20
-			var sub = createView()
-			sub.backgroundColor = 'rgba(255, 255, 255, 0.5)'
-			view.addChild(sub)
 			scrollview.addChild(view)
+			// var sub = createView()
+			// sub.backgroundColor = 'rgba(255, 255, 255, 0.5)'
+			// sub.name = 'View' + i + '--- SUB'
+			// view.addChild(sub)
+			// var sub = createView()
+			// sub.backgroundColor = 'rgba(255, 255, 255, 0.4)'
+			// sub.name = 'View' + i + '--- SUB'
+			// view.addChild(sub)
+			// var sub = createView()
+			// sub.backgroundColor = 'rgba(255, 255, 255, 0.3)'
+			// sub.name = 'View' + i + '--- SUB'
+			// view.addChild(sub)
 		}
 
 		document.addEventListener('touchstart', function(e) {
 			e.preventDefault()
 		})
+
+		// setTimeout(function() {
+		// 	console.log('######## Re-Rendering ########')
+		// 	scrollview.scheduleRender()
+
+		// }, 2000)
 
 	</script>
 
