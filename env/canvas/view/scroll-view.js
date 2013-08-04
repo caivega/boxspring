@@ -10,39 +10,25 @@ var ScrollView = boxspring.override('boxspring.view.ScrollView', {
 	scroller: null,
 
 	constructor: function() {
+
 		ScrollView.parent.constructor.call(this)
 
 		var self = this
 		this.scroller = new Scroller(function(x, y, zoom) {
 			self.contentOffset.x = -x
 			self.contentOffset.y = -y
-
 		})
-
-
 
 		return this
 	},
 
 	composite: function(context, buffer) {
-
-
-
 		ScrollView.parent.composite.call(this, context, buffer)
-
-
-		context.translate(
-			this.contentOffset.x,
-			this.contentOffset.y
-		)
-
 	},
-
-
 
 	onPropertyChange: function(target, property, oldValue, newValue) {
 
-		ScrollView.parent.onPropertyChange.call(this, target, property, oldValue, newValue)
+		ScrollView.parent.onPropertyChange.apply(this, arguments)
 
 		if (property === 'contentSize.x' ||
 			property === 'contentSize.y') {
@@ -81,7 +67,6 @@ var ScrollView = boxspring.override('boxspring.view.ScrollView', {
 		})
 
 		this.scroller.doTouchStart(ts, Date.now())
-
 	},
 
 	onTouchMove: function(touches, e) {
@@ -94,7 +79,6 @@ var ScrollView = boxspring.override('boxspring.view.ScrollView', {
 		})
 
 		this.scroller.doTouchMove(ts, Date.now())
-
 	},
 
 	onTouchEnd: function(touches, e) {
@@ -105,9 +89,8 @@ var ScrollView = boxspring.override('boxspring.view.ScrollView', {
 				pageY: touch.location.y
 			}
 		})
-		console.log('Touch End')
-		this.scroller.doTouchEnd(Date.now())
 
+		this.scroller.doTouchEnd(Date.now())
 	}
 
 })

@@ -2001,13 +2001,12 @@
                 };
                 Object.defineProperty(prototype, key, {
                     get: function() {
-                        setup.call(this);
                         var curValue = this[name];
                         var retValue = onGet.call(this, curValue);
                         if (retValue === undefined) {
                             retValue = curValue;
                         }
-                        return clone ? _.clone(retValue) : retValue;
+                        return clone ? _.clone(retValue) : retValue || null;
                     },
                     set: function(value) {
                         if (write === "once") {
@@ -2019,7 +2018,6 @@
                         } else if (!write) {
                             throw new Error("Property " + key + " is read only");
                         }
-                        setup.call(this);
                         var oldValue = this[name];
                         var newValue = onSet.call(this, value, oldValue);
                         if (newValue === undefined) {
@@ -2045,38 +2043,6 @@
         "use strict";
         var O = boxspring.define("boxspring.Object", {
             inherits: null,
-            statics: {
-                forPath: function(object, path, callback, context) {
-                    var head = [];
-                    var tail = expand(path);
-                    var owner = object;
-                    var value = null;
-                    while (tail.length) {
-                        var name = tail.shift();
-                        owns(owner, name) || error("Error parsing property path " + path + " for key " + name);
-                        value = owner[name];
-                        var h = head.join(".");
-                        var t = tail.join(".");
-                        callback.call(context, owner, value, name, h, t);
-                        owner = owner[name];
-                        head.push(name);
-                    }
-                    return object;
-                },
-                set: function(object, path, value) {
-                    O.forPath(object, path, function(owner, item, name, head, tail) {
-                        if (tail === "") owner[name] = value;
-                    });
-                    return object;
-                },
-                get: function(object, path) {
-                    var value = null;
-                    O.forPath(object, path, function(owner, item, name, head, tail) {
-                        if (tail === "") value = owner[name];
-                    });
-                    return value;
-                }
-            },
             properties: {
                 UID: {
                     write: false,
@@ -2095,13 +2061,12 @@
                 this.__bound = {};
                 this.__propertyListeners = {};
                 this.__propertyObservers = {};
+                this.__propertyCaches = {};
                 var constructor = this.constructor;
                 while (constructor) {
                     var properties = constructor.$properties;
                     if (properties) {
-                        for (var key in properties) {
-                            properties[key].setup.call(this);
-                        }
+                        for (var key in properties) properties[key].setup.call(this);
                     }
                     var parent = constructor.parent;
                     if (parent == null) {
@@ -2118,32 +2083,30 @@
                 return this;
             },
             set: function(path, value) {
-                return O.set(this, path, value);
+                return set(this, path, value);
             },
             get: function(path) {
-                return O.get(this, path);
+                return get(this, path);
             },
             addPropertyChangeListener: function(property, listener) {
                 var listeners = this.__propertyListeners[property];
-                if (listeners === undefined) {
+                if (listeners == null) {
                     listeners = this.__propertyListeners[property] = [];
                 }
                 var index = listeners.indexOf(listener);
-                if (index > -1) {
-                    return this;
-                }
+                if (index > -1) return this;
                 if (listeners.length === 0) addPropertyChangeObserver(this, this, property);
                 listeners.push(listener);
                 return this;
             },
             hasPropertyChangeListener: function(property, callback) {
                 var listeners = this.__propertyListeners[property];
-                if (listeners === undefined) return false;
+                if (listeners == null) return false;
                 return listeners.indexOf(callback) > -1;
             },
             removePropertyChangeListener: function(property, listener) {
                 var listeners = this.__propertyListeners[property];
-                if (listeners === undefined) return this;
+                if (listeners == null) return this;
                 var index = listeners.indexOf(listener);
                 if (index > -1) {
                     listeners.splice(index, 1);
@@ -2153,7 +2116,7 @@
             },
             removePropertyChangeListeners: function(property) {
                 var listeners = this.__propertyListeners[property];
-                if (listeners === undefined) return this;
+                if (listeners == null) return this;
                 delete this.__propertyListeners[property];
                 remPropertyChangeObserver(this, this, property);
                 return this;
@@ -2167,7 +2130,7 @@
                 }
                 if (event.stopped || event.cancelled) return this;
                 var observers = this.__propertyObservers[property];
-                if (observers === undefined) return this;
+                if (observers == null) return this;
                 for (var i = 0; i < observers.length; i++) {
                     var item = observers[i];
                     var observerInstance = item.observer;
@@ -2195,7 +2158,7 @@
             bind: function(name) {
                 if (name in this) {
                     var bound = this.__bound[name];
-                    if (bound === undefined) {
+                    if (bound == null) {
                         bound = this.__bound[name] = _.bind(this[name], this);
                     }
                     return bound;
@@ -2204,13 +2167,58 @@
             },
             onPropertyChange: function(target, property, newValue, oldValue, e) {},
             __propertyListeners: null,
-            __propertyObservers: null
+            __propertyObservers: null,
+            __propertyCaches: null
         });
         var UID = 0;
+        var set = function(object, path, value) {
+            var cache = object.__propertyCaches;
+            forPath(object, path, function(owner, item, name, head, tail) {
+                if (tail === "") {
+                    owner[name] = value;
+                    cache[path] = {
+                        owner: owner,
+                        key: name
+                    };
+                }
+            });
+            return object;
+        };
+        var get = function(object, path) {
+            var cache = object.__propertyCaches;
+            var value = null;
+            forPath(object, path, function(owner, item, name, head, tail) {
+                if (tail === "") {
+                    value = owner[name];
+                    cache[path] = {
+                        owner: owner,
+                        key: name
+                    };
+                }
+            });
+            return value;
+        };
+        var forPath = function(object, path, callback, context) {
+            var head = [];
+            var tail = expand(path);
+            var owner = object;
+            var value = null;
+            while (tail.length) {
+                var name = tail.shift();
+                owns(owner, name) || error("Error parsing property path " + path + " for key " + name);
+                value = owner[name];
+                var h = head.join(".");
+                var t = tail.join(".");
+                callback.call(context, owner, value, name, h, t);
+                owner = owner[name];
+                head.push(name);
+            }
+            return object;
+        };
         var addPropertyChangeObserver = function(object, observer, property, path) {
-            O.forPath(object, path || property, function(owner, value, name, head, tail) {
+            forPath(object, path || property, function(owner, value, name, head, tail) {
                 var observers = owner.__propertyObservers[name];
-                if (observers === undefined) {
+                if (observers == null) {
                     observers = owner.__propertyObservers[name] = [];
                 }
                 observers.push({
@@ -2222,9 +2230,9 @@
             return object;
         };
         var remPropertyChangeObserver = function(object, observer, property, path) {
-            O.forPath(object, path || property, function(owner, value, name, head, tail) {
+            forPath(object, path || property, function(owner, value, name, head, tail) {
                 var observers = owner.__propertyObservers[name];
-                if (observers === undefined) return false;
+                if (observers == null) return false;
                 for (var i = observers.length - 1; i >= 0; i--) {
                     var item = observers[i];
                     if (item.observer === observer && item.property === property) {
@@ -2756,7 +2764,7 @@
                 }
             },
             constructor: function(type, bubbleable, cancelable, touches) {
-                TouchEvent.parent.constructor.call(this, type, bubbleable, cancelable);
+                TouchEvent.parent.constructor.apply(this, arguments);
                 this.__touches = touches;
                 return this;
             }
@@ -2859,7 +2867,7 @@
                 if (parameters.length) {
                     event.setParameters(parameters);
                 }
-                if (event.__source === null) {
+                if (event.source === null) {
                     event.setSource(this);
                 }
                 event.setTarget(this);
@@ -2934,7 +2942,7 @@
                 }
             },
             constructor: function(receiver) {
-                TouchForwarder.parent.constructor.call(this, receiver);
+                TouchForwarder.parent.constructor.apply(this, arguments);
                 document.addEventListener("touchcancel", this.bind("onTouchCancel"));
                 document.addEventListener("touchstart", this.bind("onTouchStart"));
                 document.addEventListener("touchmove", this.bind("onTouchMove"));
@@ -3322,7 +3330,6 @@
                 RenderLoop.parent.constructor.apply(this, arguments);
                 this.__levels = [];
                 this.__queues = {};
-                this.__cb = this.bind("loop");
                 return this;
             },
             destroy: function() {
@@ -3343,7 +3350,7 @@
                 if (index > -1) return this;
                 queue.push(action);
                 if (this.__request == null) {
-                    this.__request = requestFrame(this.__cb);
+                    this.__request = requestFrame(this.bind("loop"));
                 }
                 if (this.__processing && this.__processingLevel >= level) {
                     this.__reschedule = true;
@@ -3362,7 +3369,7 @@
                     }
                 }
                 if (this.__actions === 0) {
-                    this.__request = cancelFrame(this.__cb);
+                    this.__request = cancelFrame(this.bind("loop"));
                 }
                 return this;
             },
@@ -3389,7 +3396,7 @@
                 this.__processingLevel = null;
                 if (this.__reschedule) {
                     this.__reschedule = false;
-                    this.__request = requestFrame(this.__cb);
+                    this.__request = requestFrame(this.bind("loop"));
                 } else {
                     this.__request = null;
                 }
@@ -3990,7 +3997,7 @@
                 property: {}
             },
             progress: function(progress) {
-                PropertyAnimation.parent.progress.call(this, progress);
+                PropertyAnimation.parent.progress.apply(this, arguments);
                 var target = this.target;
                 if (target == null) throw new Error("Missing target for object animator");
                 var property = this.property;
@@ -4514,30 +4521,47 @@
             inherits: boxspring.event.Emitter,
             statics: {
                 setupAnimation: function(duration, equation) {
-                    if (animationStatus == null) {
-                        animationStatus = "reading";
-                    }
-                    if (layoutRoot) {
-                        layoutRoot.layoutIfNeeded();
-                    }
-                    var group = new boxspring.animation.ViewPropertyTransaction;
-                    if (duration) group.duration = duration;
-                    if (equation) group.equation = equation;
-                    group.on("start", onViewPropertyTransactionStart);
-                    group.on("end", onViewPropertyTransactionEnd);
-                    _.include(animations, group);
+                    var transaction = new boxspring.animation.ViewPropertyTransaction;
+                    if (duration) transaction.duration = duration;
+                    if (equation) transaction.equation = equation;
+                    transaction.on("end", function() {
+                        _.remove(animationsRunning, animationGroup);
+                    });
+                    _.include(animationsReading, transaction);
+                    return animationGroup;
                 },
                 startAnimation: function() {
-                    if (layoutRoot) {
-                        layoutRoot.layoutIfNeeded();
+                    var view = null;
+                    var root = null;
+                    for (var i = 0; i < animationsLayout.length; i++) {
+                        var view = animationsLayout[i];
+                        if (view instanceof boxspring.view.Window) {
+                            root = view;
+                            break;
+                        }
+                        if (view.window == null) continue;
+                        var parent = view.parent;
+                        if (parent) {
+                            while (parent) {
+                                if (parent === root) break;
+                                parent = parent.parent;
+                            }
+                        }
+                        root = view;
                     }
-                    for (var i = 0; i < animations.length; i++) {
-                        animations[i].start();
+                    if (root) {
+                        root.layoutIfNeeded();
+                        root = null;
                     }
-                    animations = [];
+                    animationsLayout.length = 0;
+                    animationsRunning = animationsReading;
+                    animationsReading = [];
+                    _.invoke(animationsRunning, "start");
                 },
                 animationStatus: function() {
-                    return animationStatus;
+                    if (animationsRunning.length) return "running";
+                    if (animationsReading.length) return "reading";
+                    return "idle";
                 }
             },
             properties: {
@@ -4562,6 +4586,11 @@
                         return new boxspring.layout.FlexibleLayout;
                     }
                 },
+                contentOffset: {
+                    value: function() {
+                        return new boxspring.geom.Point;
+                    }
+                },
                 backgroundColor: {
                     value: "#fff"
                 },
@@ -4583,12 +4612,10 @@
                     value: "#000"
                 },
                 borderWidth: {
-                    value: 0,
-                    onSet: Math.abs
+                    value: 0
                 },
                 borderRadius: {
-                    value: 0,
-                    onSet: Math.abs
+                    value: 0
                 },
                 shadowBlur: {
                     value: 0
@@ -4606,19 +4633,14 @@
                         return new boxspring.geom.Matrix;
                     }
                 },
+                overflow: {
+                    value: "visible"
+                },
                 visible: {
                     value: true
                 },
                 opacity: {
-                    value: 1,
-                    onSet: function(value) {
-                        if (value > 1) value = 1;
-                        if (value < 0) value = 0;
-                        return value;
-                    }
-                },
-                overflow: {
-                    value: "hidden"
+                    value: 1
                 },
                 margin: {
                     value: function() {
@@ -4709,6 +4731,8 @@
                 this.on("propertychange", "measuredSize.y", onPropertyChange);
                 this.on("propertychange", "measuredOffset.x", onPropertyChange);
                 this.on("propertychange", "measuredOffset.y", onPropertyChange);
+                this.on("propertychange", "contentOffset.x", onPropertyChange);
+                this.on("propertychange", "contentOffset.y", onPropertyChange);
                 this.on("propertyanimationstart", this.bind("onPropertyAnimationStart"));
                 this.on("propertyanimationupdate", this.bind("onPropertyAnimationUpdate"));
                 this.on("propertyanimationend", this.bind("onPropertyAnimationEnd"));
@@ -4787,8 +4811,8 @@
                 view.setWindow(this.window);
                 view.setParent(this);
                 view.setParentReceiver(this);
-                this.scheduleLayout();
                 this.emit("add", view);
+                this.scheduleLayout();
                 return this;
             },
             addChildBefore: function(view, before) {
@@ -4814,8 +4838,8 @@
                 view.setWindow(null);
                 view.setParent(null);
                 view.setParentReceiver(null);
-                this.scheduleLayout();
                 this.emit("remove", view);
+                this.scheduleLayout();
                 return this;
             },
             removeFromParent: function() {
@@ -4860,7 +4884,42 @@
             },
             animatedPropertyValue: function(property) {
                 var value = this.__animatedPropertyValues[property];
-                if (value == null) return this.get(property);
+                if (value == null) {
+                    switch (property) {
+                      case "backgroundColor":
+                        return this.backgroundColor;
+                      case "backgroundImage":
+                        return this.backgroundImage;
+                      case "backgroundSize.x":
+                        return this.backgroundSize.x;
+                      case "backgroundSize.y":
+                        return this.backgroundSize.y;
+                      case "borderColor":
+                        return this.borderColor;
+                      case "borderWidth":
+                        return this.borderWidth;
+                      case "borderRadius":
+                        return this.borderRadius;
+                      case "shadowBlur":
+                        return this.shadowBlur;
+                      case "shadowColor":
+                        return this.shadowColor;
+                      case "shadowOffset.x":
+                        return this.shadowOffset.x;
+                      case "shadowOffset.y":
+                        return this.shadowOffset.y;
+                      case "opacity":
+                        return this.opacity;
+                      case "measuredSize.x":
+                        return this.measuredSize.x;
+                      case "measuredSize.y":
+                        return this.measuredSize.y;
+                      case "measuredOffset.x":
+                        return this.measuredOffset.x;
+                      case "measuredOffset.y":
+                        return this.measuredOffset.y;
+                    }
+                }
                 return value;
             },
             animatedPropertyEvaluator: function(property) {
@@ -4883,6 +4942,8 @@
                   case "measuredSize.y":
                   case "measuredOffset.x":
                   case "measuredOffset.y":
+                  case "contentOffset.x":
+                  case "contentOffset.y":
                     return new boxspring.animation.NumberEvaluator;
                 }
                 return null;
@@ -4891,7 +4952,7 @@
                 return animatableProperties.indexOf(property) !== -1;
             },
             redrawOnPropertyChange: function(property) {
-                return scheduleRedrawProperties.indexOf(property) !== -1;
+                return false;
             },
             reflowOnPropertyChange: function(property) {
                 return scheduleReflowProperties.indexOf(property) !== -1;
@@ -4900,11 +4961,12 @@
                 return scheduleLayoutProperties.indexOf(property) !== -1;
             },
             scheduleRedraw: function() {
-                this.__redrawScheduled = true;
+                this.__needsRedraw = true;
                 return this;
             },
             scheduleLayout: function() {
-                this.__layoutScheduled = true;
+                this.__needsLayout = true;
+                if (animationsReading.length) _.include(animationsLayout, this);
                 return this;
             },
             scheduleReflow: function() {
@@ -4913,8 +4975,8 @@
                 return this;
             },
             redrawIfNeeded: function(context) {
-                if (this.__redrawScheduled) {
-                    this.__redrawScheduled = false;
+                if (this.__needsRedraw) {
+                    this.__needsRedraw = false;
                     this.redraw(context);
                     this.emit("redraw", context);
                 }
@@ -4922,19 +4984,19 @@
             },
             layoutIfNeeded: function() {
                 var parent = this.parent;
-                if (parent && parent.__layoutScheduled) {
+                if (parent && parent.__needsLayout) {
                     parent.layoutIfNeeded();
                     return;
                 }
-                if (this.__layoutScheduled) {
-                    this.__layoutScheduled = false;
+                if (this.__needsLayout) {
+                    this.__needsLayout = false;
                     this.layout();
                     this.emit("layout");
                 }
                 _.invoke(this.__children, "layoutIfNeeded");
                 return this;
             },
-            redraw: function(context, area) {
+            redraw: function(context) {
                 return this;
             },
             layout: function() {
@@ -4948,19 +5010,18 @@
             },
             onPropertyChange: function(target, property, newValue, oldValue, e) {
                 if (this.redrawOnPropertyChange(property)) this.scheduleRedraw();
-                if (this.reflowOnPropertyChange(property)) this.scheduleReflow();
                 if (this.layoutOnPropertyChange(property)) this.scheduleLayout();
-                if (layoutRoot === null) {
-                    layoutRoot = this.window;
-                }
-                var animation = animations[animations.length - 1];
-                if (animation && this.propertyIsAnimatable(property)) {
-                    var t = newValue;
-                    var f = oldValue;
-                    if (property === "measuredSize.x" && oldValue === "none" || property === "measuredSize.y" && oldValue === "none" || property === "measuredOffset.x" && oldValue === "none" || property === "measuredOffset.y" && oldValue === "none") {
-                        f = t;
+                if (this.reflowOnPropertyChange(property)) this.scheduleReflow();
+                var animation = _.last(animationsReading);
+                if (animation) {
+                    if (this.propertyIsAnimatable(property)) {
+                        var t = newValue;
+                        var f = oldValue;
+                        if (property === "measuredSize.x" && oldValue === "none" || property === "measuredSize.y" && oldValue === "none" || property === "measuredOffset.x" && oldValue === "none" || property === "measuredOffset.y" && oldValue === "none") {
+                            f = t;
+                        }
+                        animation.addAnimatedProperty(this, property, f, t);
                     }
-                    animation.addAnimatedProperty(this, property, f, t);
                 }
             },
             onRedraw: function(e) {},
@@ -4976,7 +5037,6 @@
             },
             onPropertyAnimationUpdate: function(property, value) {
                 this.__animatedPropertyValues[property] = value;
-                if (this.redrawOnPropertyChange(property)) this.scheduleRedraw();
             },
             onPropertyAnimationEnd: function(property, value) {
                 delete this.__animatedPropertyValues[property];
@@ -5018,26 +5078,16 @@
                 _.invoke(this.__children, "setWindow", value);
                 return this;
             },
-            __redrawScheduled: false,
-            __layoutScheduled: false,
+            __needsRedraw: false,
+            __needsLayout: false,
             __animatedPropertyValues: null
         });
         var scheduleReflowProperties = [ "size.x", "size.y", "minSize.x", "minSize.y", "maxSize.x", "maxSize.y", "visible", "margin.top", "margin.left", "margin.right", "margin.bottom", "position.top", "position.left", "position.right", "position.bottom" ];
-        var scheduleLayoutProperties = [ "measuredSize.x", "measuredSize.y", "borderWidth", "padding.top", "padding.left", "padding.right", "padding.bottom", "contentLayout" ];
-        var animatableProperties = [ "backgroundColor", "borderColor", "shadowColor", "backgroundImage", "backgroundSize.x", "backgroundSize.y", "borderWidth", "borderRadius", "shadowBlur", "shadowOffset.x", "shadowOffset.y", "opacity", "measuredSize.x", "measuredSize.y", "measuredOffset.x", "measuredOffset.y" ];
-        var layoutRoot = null;
-        var animations = [];
-        var animationStatus = null;
-        var animationCount = 0;
-        var onViewPropertyTransactionStart = function(e) {
-            animationCount++;
-            animationStatus = "running";
-        };
-        var onViewPropertyTransactionEnd = function(e) {
-            animationCount--;
-            animationStatus = animationCount === 0 && animationStatus !== "reading" ? null : "reading";
-            e.source.destroy();
-        };
+        var scheduleLayoutProperties = [ "contentLayout", "measuredSize.x", "measuredSize.y", "borderWidth", "padding.top", "padding.left", "padding.right", "padding.bottom" ];
+        var animatableProperties = [ "backgroundColor", "borderColor", "shadowColor", "backgroundImage", "backgroundSize.x", "backgroundSize.y", "borderWidth", "borderRadius", "shadowBlur", "shadowOffset.x", "shadowOffset.y", "opacity", "measuredSize.x", "measuredSize.y", "measuredOffset.x", "measuredOffset.y", "contentOffset.x", "contentOffset.y" ];
+        var animationsReading = [];
+        var animationsRunning = [];
+        var animationsLayout = [];
     },
     "1m": function(require, module, exports, global) {
         "use strict";
@@ -5058,21 +5108,38 @@
                 View.parent.destroy.call(this);
                 return this;
             },
+            renderOnPropertyChange: function(property) {
+                return scheduleRenderProperties.indexOf(property) !== -1;
+            },
             redrawOnPropertyChange: function(property) {
                 return scheduleRedrawProperties.indexOf(property) !== -1;
             },
-            scheduleLayout: function() {
-                View.parent.scheduleLayout.call(this);
-                updateDisplayWithMask(this, LAYOUT_UPDATE_MASK);
+            scheduleRender: function(force) {
+                var RenderLoop = boxspring.render.RenderLoop;
+                if (this.__needsRender && !force) return this;
+                this.__needsRender = true;
+                var status = View.animationStatus();
+                if (status === "reading") return this;
+                if (this.window || this instanceof boxspring.view.Window) {
+                    if (updateDisplayRoot === null) {
+                        updateDisplayRoot = this;
+                    }
+                    if (updateDisplayScheduled === false) {
+                        updateDisplayScheduled = true;
+                        RenderLoop.run(updateDisplay, RenderLoop.RENDER_PRIORITY);
+                    }
+                }
                 return this;
             },
             scheduleRedraw: function() {
                 View.parent.scheduleRedraw.call(this);
-                updateDisplayWithMask(this, REDRAW_UPDATE_MASK);
+                this.scheduleRender();
                 return this;
             },
-            scheduleRender: function() {
-                updateDisplayWithMask(this, RENDER_UPDATE_MASK);
+            scheduleLayout: function() {
+                View.parent.scheduleLayout.call(this);
+                this.scheduleRender();
+                return this;
             },
             redraw: function(context) {
                 this.__redrawBackground(context);
@@ -5080,37 +5147,28 @@
                 this.__redrawShadow(context);
                 return this;
             },
-            layout: function() {
-                View.parent.layout.call(this);
-            },
-            composite: function(context, buffer) {
-                var sizeX = this.animatedPropertyValue("measuredSize.x");
-                var sizeY = this.animatedPropertyValue("measuredSize.y");
-                var offsetX = this.animatedPropertyValue("measuredOffset.x");
-                var offsetY = this.animatedPropertyValue("measuredOffset.y");
-                context.drawImage(buffer, 0, 0, buffer.width, buffer.height, offsetX, offsetY, sizeX, sizeY);
-            },
             onPropertyChange: function(target, property, newValue, oldValue, e) {
+                View.parent.onPropertyChange.apply(this, arguments);
                 if (property === "shadowBlur" || property === "shadowColor" || property === "shadowOffset" || property === "shadowOffset.x" || property === "shadowOffset.y") {
-                    updateDisplayWithMask(this, REDRAW_SHADOW_UPDATE_MASK);
+                    this.__needsShadow = true;
                 }
-                if (property === "measuredSize" || property === "measuredSize.x" || property === "measuredSize.y" || property === "measuredOffset" || property === "measuredOffset.x" || property === "measuredOffset.y" || property === "opacity" || property === "transform" || property === "overflow") {
-                    updateDisplayWithMask(this, RENDER_UPDATE_MASK);
-                }
-                View.parent.onPropertyChange.call(this, target, property, newValue, oldValue, e);
+                if (this.renderOnPropertyChange(property)) this.scheduleRender();
             },
             onPropertyAnimationUpdate: function(property, value) {
-                View.parent.onPropertyAnimationUpdate.call(this, property, value);
-                updateDisplayWithMask(this, ANIMATE_UPDATE_MASK);
+                View.parent.onPropertyAnimationUpdate.apply(this, arguments);
+                if (this.redrawOnPropertyChange(property)) this.scheduleRedraw();
+                if (this.renderOnPropertyChange(property)) this.scheduleRender(true);
             },
+            __needsRender: false,
+            __needsShadow: false,
             __redrawBackground: function(context) {
                 var sizeX = this.measuredSize.x;
                 var sizeY = this.measuredSize.y;
                 var borderRadius = this.animatedPropertyValue("borderRadius");
-                var backgroundClip = this.animatedPropertyValue("backgroundClip");
                 var backgroundColor = this.animatedPropertyValue("backgroundColor");
                 var backgroundImage = this.animatedPropertyValue("backgroundImage");
-                var backgroundRepeat = this.animatedPropertyValue("backgroundRepeat");
+                var backgroundClip = this.backgroundClip;
+                var backgroundRepeat = this.backgroundRepeat;
                 if (backgroundColor || backgroundImage) {
                     var backgroundSizeX = sizeX;
                     var backgroundSizeY = sizeY;
@@ -5166,107 +5224,71 @@
             },
             __redrawShadow: function(context, area) {}
         });
+        var scheduleRenderProperties = [ "measuredSize", "measuredSize.x", "measuredSize.y", "measuredOffset", "measuredOffset.x", "measuredOffset.y", "contentOffset.x", "contentOffset.y", "transform", "overflow", "opacity" ];
         var scheduleRedrawProperties = [ "backgroundColor", "backgroundImage", "backgroundRepeat", "backgroundClip", "backgroundSize", "backgroundSize.x", "backgroundSize.y", "borderRadius", "borderColor", "borderWidth", "shadowBlur", "shadowColor", "shadowOffset", "shadowOffset.x", "shadowOffset.y" ];
-        var RENDER_UPDATE_MASK = 1;
-        var LAYOUT_UPDATE_MASK = 2;
-        var REDRAW_UPDATE_MASK = 4;
-        var REDRAW_SHADOW_UPDATE_MASK = 8;
-        var ANIMATE_UPDATE_MASK = 16;
         var renderCaches = {};
         var shadowCaches = {};
-        var updateDisplayViews = {};
-        var updateDisplayMasks = {};
         var updateDisplayScheduled = false;
-        var updateDisplayWithMask = function(view, mask) {
-            if (updateDisplayMasks[view.UID] == null) {
-                updateDisplayMasks[view.UID] = 0;
-            }
-            updateDisplayViews[view.UID] = view;
-            updateDisplayMasks[view.UID] |= mask;
-            var status = View.animationStatus();
-            if (status === "reading" || status === "running") {
-                if (mask !== ANIMATE_UPDATE_MASK) return;
-            }
-            if (updateDisplayScheduled === false && (view.window || view instanceof boxspring.view.Window)) {
-                updateDisplayScheduled = true;
-                boxspring.render.RenderLoop.run(updateDisplay, boxspring.render.RenderLoop.RENDER_PRIORITY);
-            }
-        };
-        var lastCalledTime;
-        var fps;
+        var updateDisplayRoot = null;
         var updateDisplay = function() {
             updateDisplayScheduled = false;
-            var root = null;
-            for (var key in updateDisplayViews) {
-                var view = updateDisplayViews[key];
-                if (view instanceof boxspring.view.Window) {
-                    root = view;
-                    break;
-                }
-                root = updateDisplayViews[key].window;
-                if (root) break;
-            }
-            if (root == null) return;
-            console.time("Rendering");
-            if (root.size.x === "auto") root.measuredSize.x = window.innerWidth;
-            if (root.size.y === "auto") root.measuredSize.y = window.innerHeight;
+            if (updateDisplayRoot == null) return;
+            if (root.size.x === "auto") updateDisplayRoot.measuredSize.x = window.innerWidth;
+            if (root.size.y === "auto") updateDisplayRoot.measuredSize.y = window.innerHeight;
             screenContext.clearRect(0, 0, screenCanvas.width, screenCanvas.height);
-            composite(root, screenContext);
-            updateDisplayViews = {};
-            updateDisplayMasks = {};
-            console.timeEnd("Rendering");
-            if (!lastCalledTime) {
-                lastCalledTime = (new Date).getTime();
-                fps = 0;
-                return;
-            }
-            var delta = ((new Date).getTime() - lastCalledTime) / 1e3;
-            lastCalledTime = (new Date).getTime();
-            fps = 1 / delta;
-            screenContext.fillText(fps.toFixed(1) + "fps", 10, 10);
+            composite(updateDisplayRoot, screenContext, 0, 0);
         };
-        var composite = function(view, screen) {
-            var mask = updateDisplayMasks[view.UID];
-            if (mask & LAYOUT_UPDATE_MASK) {
-                view.layoutIfNeeded();
+        var composite = function(view, screen, offsetX, offsetY) {
+            if (view.__needsLayout) view.layoutIfNeeded();
+            var contentOffsetX = 0;
+            var contentOffsetY = 0;
+            var parent = view.parent;
+            if (parent) {
+                contentOffsetX = parent.contentOffset.x;
+                contentOffsetY = parent.contentOffset.y;
             }
-            var test = view.get("measuredSize.x");
-            var sizeX = view.animatedPropertyValue("measuredSize.x");
-            var sizeY = view.animatedPropertyValue("measuredSize.y");
-            var offsetX = view.animatedPropertyValue("measuredOffset.x");
-            var offsetY = view.animatedPropertyValue("measuredOffset.y");
-            var cache = renderCaches[view.UID];
-            if (cache == null) {
-                cache = renderCaches[view.UID] = document.createElement("canvas");
-                cache.width = Math.floor(view.measuredSize.x);
-                cache.height = Math.floor(view.measuredSize.y);
-            } else if (cache.width !== Math.floor(view.measuredSize.x) || cache.height !== Math.floor(view.measuredSize.y)) {
-                cache.width = view.measuredSize.x;
-                cache.height = view.measuredSize.y;
-                mask |= REDRAW_UPDATE_MASK;
-                view.scheduleRedraw();
-            }
-            if (mask & REDRAW_UPDATE_MASK) {
-                var context = cache.getContext("2d");
-                context.save();
-                context.clearRect(0, 0, view.measuredSize.x, view.measuredSize.y);
-                view.redrawIfNeeded(context);
-                context.restore();
-            }
+            var viewSizeX = view.animatedPropertyValue("measuredSize.x");
+            var viewSizeY = view.animatedPropertyValue("measuredSize.y");
+            var viewOffsetX = view.animatedPropertyValue("measuredOffset.x") + offsetX + contentOffsetX;
+            var viewOffsetY = view.animatedPropertyValue("measuredOffset.y") + offsetY + contentOffsetY;
+            var viewOpacity = view.animatedPropertyValue("opacity");
             screen.save();
-            screen.globalAlpha = screen.globalAlpha * view.animatedPropertyValue("opacity");
-            if (view.overflow === "hidden") {
-                screen.rect(offsetX, offsetY, sizeX, sizeY);
-                screen.clip();
+            screen.globalAlpha = screen.globalAlpha * viewOpacity;
+            var r1x1 = 0;
+            var r1x2 = 0 + updateDisplayRoot.measuredSize.x;
+            var r1y1 = 0;
+            var r1y2 = 0 + updateDisplayRoot.measuredSize.y;
+            var r2x1 = viewOffsetX;
+            var r2x2 = viewOffsetX + viewSizeX;
+            var r2y1 = viewOffsetY;
+            var r2y2 = viewOffsetY + viewSizeY;
+            if (r1x1 < r2x2 && r1x2 > r2x1 && r1y1 < r2y2 && r1y2 > r2y1) {
+                var cache = renderCaches[view.UID];
+                if (cache == null) {
+                    cache = renderCaches[view.UID] = document.createElement("canvas");
+                    cache.width = Math.floor(view.measuredSize.x);
+                    cache.height = Math.floor(view.measuredSize.y);
+                    view.scheduleRedraw();
+                } else if (cache.width !== Math.floor(view.measuredSize.x) || cache.height !== Math.floor(view.measuredSize.y)) {
+                    cache.width = view.measuredSize.x;
+                    cache.height = view.measuredSize.y;
+                    view.scheduleRedraw();
+                }
+                view.__needsRender = false;
+                if (view.__needsRedraw) {
+                    var context = cache.getContext("2d");
+                    context.save();
+                    context.clearRect(0, 0, view.measuredSize.x, view.measuredSize.y);
+                    view.redrawIfNeeded(context);
+                    context.restore();
+                }
+                if (view.overflow === "hidden") {}
+                if (viewSizeX > 0 && viewSizeY > 0 && cache.width > 0 && cache.height > 0) {
+                    screen.drawImage(cache, 0, 0, cache.width, cache.height, viewOffsetX, viewOffsetY, viewSizeX, viewSizeY);
+                }
             }
-            if (sizeX > 0 && sizeY > 0 && cache.width > 0 && cache.height > 0) {
-                view.composite(screen, cache);
-            }
-            screen.translate(offsetX, offsetY);
             var children = view.__children;
-            for (var i = 0; i < children.length; i++) {
-                composite(children[i], screen);
-            }
+            for (var i = 0; i < children.length; i++) composite(children[i], screen, viewOffsetX, viewOffsetY);
             screen.restore();
         };
         var createRectPath = function(context, originX, originY, sizeX, sizeY, radius) {
@@ -5286,6 +5308,19 @@
             }
             context.closePath();
             return this;
+        };
+        var showFPS = function() {
+            var lastCalledTime;
+            var fps;
+            if (!lastCalledTime) {
+                lastCalledTime = (new Date).getTime();
+                fps = 0;
+                return;
+            }
+            var delta = ((new Date).getTime() - lastCalledTime) / 1e3;
+            lastCalledTime = (new Date).getTime();
+            fps = 1 / delta;
+            screenContext.fillText(fps.toFixed(1) + "fps", 10, 10);
         };
         var screenCanvas = null;
         var screenContext = null;
@@ -5310,11 +5345,6 @@
                     value: function() {
                         return new boxspring.geom.Size;
                     }
-                },
-                contentOffset: {
-                    value: function() {
-                        return new boxspring.geom.Point;
-                    }
                 }
             },
             constructor: function() {
@@ -5322,8 +5352,6 @@
                 var onPropertyChange = this.bind("onPropertyChange");
                 this.on("propertychange", "contentSize.x", onPropertyChange);
                 this.on("propertychange", "contentSize.y", onPropertyChange);
-                this.on("propertychange", "contentOffset.x", onPropertyChange);
-                this.on("propertychange", "contentOffset.y", onPropertyChange);
                 this.overflow = "hidden";
                 return this;
             },
@@ -5353,10 +5381,9 @@
             },
             composite: function(context, buffer) {
                 ScrollView.parent.composite.call(this, context, buffer);
-                context.translate(this.contentOffset.x, this.contentOffset.y);
             },
             onPropertyChange: function(target, property, oldValue, newValue) {
-                ScrollView.parent.onPropertyChange.call(this, target, property, oldValue, newValue);
+                ScrollView.parent.onPropertyChange.apply(this, arguments);
                 if (property === "contentSize.x" || property === "contentSize.y") {
                     this.scheduleLayout();
                     this.scroller.setDimensions(this.measuredSize.x, this.measuredSize.y, this.contentSize.x, this.contentSize.y);
@@ -5393,7 +5420,6 @@
                         pageY: touch.location.y
                     };
                 });
-                console.log("Touch End");
                 this.scroller.doTouchEnd(Date.now());
             }
         });
@@ -6128,11 +6154,11 @@
                 return this;
             },
             onAdd: function(view, e) {
-                Window.parent.onAdd.call(this, view);
+                Window.parent.onAdd.apply(this, arguments);
                 view.setWindow(this);
             },
             onRemove: function(view, e) {
-                Window.parent.onRemove.call(this, view);
+                Window.parent.onRemove.apply(this, arguments);
                 view.setWindow(null);
             }
         });

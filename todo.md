@@ -1,6 +1,8 @@
 TODO
 ================================================================================
 
+- View add and remove event, also pass the parent
+
 - Think about naming layout content and Layout to somethingelse
 
 - ScheduleRedraw retoure dans la base background-url(:canvas)
@@ -49,4 +51,4 @@ Documentation
      * @method __needsRedraw
      * @private
      */
-    __redrawScheduled: false,
+    __needsRedraw: false,

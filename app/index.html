@@ -18,23 +18,29 @@
 
 	<script type="text/javascript" src="../boxspring.js"></script>
 	<script type="text/javascript">
+		var count = 0
 
 
 		var View   = boxspring.view.View
 		var Window = boxspring.view.Window
+
+		var r = 0
+		var g = 0
+		var b = 200
 
 		var createView = function() {
 			var r = Math.round(Math.random() * 255)
 			var g = Math.round(Math.random() * 255)
 			var b = Math.round(Math.random() * 255)
 			var view = new View()
+			view.name = 'View - ' + (++count)
 			view.backgroundColor = 'rgba(' + r + ' ,' + g + ',' + b + ', 0.5)';
 			return view
 		}
 
 		var root = boxspring.view.Window.instance()
 		root.name = 'Window'
-		root.backgroundColor = 'rgba(200, 200, 200, 1)'
+		root.backgroundColor = 'rgba(200, 200, 200, 0.5)'
 		root.size.x = 'auto'
 		root.size.y = 'auto'
 
@@ -46,7 +52,6 @@
 /*
 		for (var i = 0; i < 5; i++) {
 			var view = createView()
-			view.name = 'View' + i
 			view.size.x = 'fill'
 			view.size.y = 'fill'
 			root.addChild(view)
@@ -54,20 +59,18 @@
 
 		var animate = function() {
 
-//			var view = createView()
-//			view.size.y = 0
-//			view.opacity = 0
-//			root.addChild(view)
+			var view = createView()
+			view.size.y = 0
+
+			root.addChild(view)
+
+
 
 
 
 			View.setupAnimation(1200)
-
-			//view.backgroundColor = 'red'
-
-//			root.contentLayout.orientation = root.contentLayout.orientation === 'horizontal' ? 'vertical' : 'horizontal'
-//	view.size.y = 'fill'
-//	view.opacity = 1
+			view.size.y = 'fill'
+			//root.contentLayout.orientation = root.contentLayout.orientation === 'horizontal' ? 'vertical' : 'horizontal'
 			View.startAnimation()
 		}
 
@@ -88,6 +91,7 @@
 
 		for (var i = 0; i < 100; i++) {
 			var view = createView()
+
 			view.name = 'View' + i
 			view.size.x = 'fill'
 			view.size.y = 100
