@@ -66,12 +66,20 @@
 		view.on('touchstart', function(touches, e) {
 			offsetX = touches[0].location.x - view.measuredOffset.x
 			offsetY = touches[0].location.y - view.measuredOffset.y
-			view.backgroundColor = 'blue'
+
 			touch = true
+
+			View.setupAnimation()
+			view.backgroundColor = 'blue'
+			View.startAnimation()
 		})
 
 		view.on('touchend', function(touches, e) {
+
+			View.setupAnimation()
 			view.backgroundColor = color
+			View.startAnimation()
+
 			touch = false
 		})
 
@@ -80,7 +88,6 @@
 			view.position.y = touches[0].location.y - offsetY
 		})
 
-		console.log(view.position)
 
 		//
 		// Animations
@@ -147,11 +154,6 @@
 			// view.addChild(sub)
 		}
 
-		// setTimeout(function() {
-		// 	console.log('######## Re-Rendering ########')
-		// 	scrollview.scheduleRender()
-
-		// }, 2000)
 */
 	</script>
 

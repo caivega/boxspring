@@ -3449,10 +3449,13 @@
                 if (this.__t == null) this.__t = parse(to);
                 var f = this.__f;
                 var t = this.__t;
-                var r = progress * (f.r - t.r) + f.r;
-                var g = progress * (f.g - t.g) + f.g;
-                var b = progress * (f.b - t.b) + f.b;
-                var a = progress * (f.a - t.a) + f.a;
+                if (f.a == null) f.a = 1;
+                if (t.a == null) t.a = 1;
+                var r = Math.round(progress * (t.r - f.r) + f.r);
+                var g = Math.round(progress * (t.g - f.g) + f.g);
+                var b = Math.round(progress * (t.b - f.b) + f.b);
+                var a = progress * (t.a - f.a) + f.a;
+                a = Math.round(a * 100) / 100;
                 return "rgba(" + r + "," + g + "," + b + "," + a + ")";
             },
             __f: null,
@@ -4217,7 +4220,6 @@
                     } else if (positionB !== "auto") {
                         measuredOffsetY = frameSizeY - measuredSizeY - positionB + border;
                     }
-                    console.log("Measured offset", measuredOffsetX, measuredOffsetY);
                     view.measuredSize.x = measuredSizeX;
                     view.measuredSize.y = measuredSizeY;
                     view.measuredOffset.x = measuredOffsetX + frameOffsetX;
@@ -4540,10 +4542,11 @@
                     if (duration) transaction.duration = duration;
                     if (equation) transaction.equation = equation;
                     transaction.on("end", function() {
-                        _.remove(animationsRunning, animationGroup);
+                        _.remove(animationsRunning, transaction);
+                        transaction.destroy();
                     });
                     _.include(animationsReading, transaction);
-                    return animationGroup;
+                    return transaction;
                 },
                 startAnimation: function() {
                     var view = null;
@@ -5131,7 +5134,8 @@
             },
             scheduleRender: function(force) {
                 var RenderLoop = boxspring.render.RenderLoop;
-                if (this.__needsRender && !force) return this;
+                var status = View.animationStatus();
+                if (this.__needsRender && status !== "running") return this;
                 this.__needsRender = true;
                 var status = View.animationStatus();
                 if (status === "reading") return this;
@@ -5251,6 +5255,7 @@
             if (root.size.x === "auto") updateDisplayRoot.measuredSize.x = window.innerWidth;
             if (root.size.y === "auto") updateDisplayRoot.measuredSize.y = window.innerHeight;
             screenContext.clearRect(0, 0, screenCanvas.width, screenCanvas.height);
+            console.log("Update Display");
             composite(updateDisplayRoot, screenContext, 0, 0);
         };
         var composite = function(view, screen, offsetX, offsetY) {

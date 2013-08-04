@@ -60,7 +60,9 @@ var View = boxspring.override('boxspring.view.View', {
 
 		var RenderLoop = boxspring.render.RenderLoop
 
-		if (this.__needsRender && !force)
+		var status = View.animationStatus()
+
+		if (this.__needsRender && status !== 'running')
 			return this
 
 		this.__needsRender = true
@@ -357,6 +359,8 @@ var updateDisplay = function() {
 		screenCanvas.width,
 		screenCanvas.height
 	)
+
+console.log('Update Display')
 
 	composite(updateDisplayRoot, screenContext, 0, 0)
 }
