@@ -20,6 +20,10 @@
 	<script type="text/javascript">
 		var count = 0
 
+		document.addEventListener('touchstart', function(e) {
+			e.preventDefault()
+		})
+
 
 		var View   = boxspring.view.View
 		var Window = boxspring.view.Window
@@ -45,6 +49,38 @@
 		root.size.y = 'auto'
 
 		var forwarder = new boxspring.event.TouchForwarder(root)
+
+		var view = createView()
+		view.position.x = 100
+		view.position.y = 100
+		view.size.x = 100
+		view.size.y = 100
+		root.addChild(view)
+
+		var color = view.backgroundColor
+		var touch = false
+
+		var offsetX = 0
+		var offsetY = 0
+
+		view.on('touchstart', function(touches, e) {
+			offsetX = touches[0].location.x - view.measuredOffset.x
+			offsetY = touches[0].location.y - view.measuredOffset.y
+			view.backgroundColor = 'blue'
+			touch = true
+		})
+
+		view.on('touchend', function(touches, e) {
+			view.backgroundColor = color
+			touch = false
+		})
+
+		view.on('touchmove', function(touches, e) {
+			view.position.x = touches[0].location.x - offsetX
+			view.position.y = touches[0].location.y - offsetY
+		})
+
+		console.log(view.position)
 
 		//
 		// Animations
@@ -76,7 +112,7 @@
 
 		document.addEventListener('touchend', animate)
 */
-
+/*
 		//
 		//
 		//
@@ -111,16 +147,12 @@
 			// view.addChild(sub)
 		}
 
-		document.addEventListener('touchstart', function(e) {
-			e.preventDefault()
-		})
-
 		// setTimeout(function() {
 		// 	console.log('######## Re-Rendering ########')
 		// 	scrollview.scheduleRender()
 
 		// }, 2000)
-
+*/
 	</script>
 
 </body>

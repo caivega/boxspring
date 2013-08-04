@@ -4217,6 +4217,7 @@
                     } else if (positionB !== "auto") {
                         measuredOffsetY = frameSizeY - measuredSizeY - positionB + border;
                     }
+                    console.log("Measured offset", measuredOffsetX, measuredOffsetY);
                     view.measuredSize.x = measuredSizeX;
                     view.measuredSize.y = measuredSizeY;
                     view.measuredOffset.x = measuredOffsetX + frameOffsetX;
@@ -4355,6 +4356,13 @@
                 }
                 for (var i = 0; i < children.length; i++) {
                     var child = children[i];
+                    var positionT = child.position.top;
+                    var positionL = child.position.left;
+                    var positionR = child.position.right;
+                    var positionB = child.position.bottom;
+                    if (positionT !== "auto" || positionB !== "auto" && positionL !== "auto" || positionR !== "auto") {
+                        continue;
+                    }
                     var marginT = child.margin.top;
                     var marginL = child.margin.left;
                     var marginR = child.margin.right;
@@ -4478,6 +4486,13 @@
                 }
                 for (var i = 0; i < children.length; i++) {
                     var child = children[i];
+                    var positionT = child.position.top;
+                    var positionL = child.position.left;
+                    var positionR = child.position.right;
+                    var positionB = child.position.bottom;
+                    if (positionT !== "auto" || positionB !== "auto" && positionL !== "auto" || positionR !== "auto") {
+                        continue;
+                    }
                     var marginT = child.margin.top;
                     var marginL = child.margin.left;
                     var marginR = child.margin.right;
