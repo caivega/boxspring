@@ -2006,7 +2006,7 @@
                         if (retValue === undefined) {
                             retValue = curValue;
                         }
-                        return clone ? _.clone(retValue) : retValue || null;
+                        return clone ? _.clone(retValue) : retValue;
                     },
                     set: function(value) {
                         if (write === "once") {
@@ -2263,183 +2263,6 @@
     },
     a: function(require, module, exports, global) {
         "use strict";
-        var Matrix = boxspring.define("boxspring.geom.Matrix", {
-            properties: {
-                m11: {
-                    value: 1
-                },
-                m12: {
-                    value: 0
-                },
-                m13: {
-                    value: 0
-                },
-                m14: {
-                    value: 0
-                },
-                m21: {
-                    value: 0
-                },
-                m22: {
-                    value: 1
-                },
-                m23: {
-                    value: 0
-                },
-                m24: {
-                    value: 0
-                },
-                m31: {
-                    value: 0
-                },
-                m32: {
-                    value: 0
-                },
-                m33: {
-                    value: 1
-                },
-                m34: {
-                    value: 0
-                },
-                m41: {
-                    value: 0
-                },
-                m42: {
-                    value: 0
-                },
-                m43: {
-                    value: 0
-                },
-                m44: {
-                    value: 1
-                }
-            },
-            translate: function(x, y, z) {
-                if (x == null) x = 0;
-                if (y == null) y = 0;
-                if (z == null) z = 0;
-                var matrix = [ 1, 0, 0, x, 0, 1, 0, y, 0, 0, 1, z, 0, 0, 0, 1 ];
-                return this.combine(matrix);
-            },
-            scale: function(x, y, z) {
-                if (x == null) x = 1;
-                if (y == null) y = 1;
-                if (z == null) z = 1;
-                var matrix = [ x, 0, 0, 0, 0, y, 0, 0, 0, 0, z, 0, 0, 0, 0, 1 ];
-                return this.combine(matrix);
-            },
-            rotate: function(x, y, z) {
-                if (x == null) x = 0;
-                if (y == null) y = 0;
-                if (z == null) z = 0;
-                var s = Math.sin(x);
-                var c = Math.cos(y);
-                var matrix = [ c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ];
-                return this.combine(matrix);
-            },
-            shear: function(x, y, z) {
-                if (x == null) x = 0;
-                if (y == null) y = 0;
-                if (z == null) z = 0;
-                var x = Math.tan(x);
-                var y = Math.tan(y);
-                var matrix = [ 1, x, 0, 0, y, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 ];
-                return this.combine(matrix);
-            },
-            combine: function(matrix) {
-                var m11, m12, m13, m14, m21, m22, m23, m24, m31, m32, m33, m34, m41, m42, m43, m44;
-                if (matrix instanceof Matrix) {
-                    m11 = matrix.m11;
-                    m12 = matrix.m12;
-                    m13 = matrix.m13;
-                    m14 = matrix.m14;
-                    m21 = matrix.m21;
-                    m22 = matrix.m22;
-                    m23 = matrix.m23;
-                    m24 = matrix.m24;
-                    m31 = matrix.m31;
-                    m32 = matrix.m32;
-                    m33 = matrix.m33;
-                    m34 = matrix.m34;
-                    m41 = matrix.m41;
-                    m42 = matrix.m42;
-                    m43 = matrix.m43;
-                    m44 = matrix.m44;
-                } else {
-                    m11 = matrix[0];
-                    m12 = matrix[1];
-                    m13 = matrix[2];
-                    m14 = matrix[3];
-                    m21 = matrix[4];
-                    m22 = matrix[5];
-                    m23 = matrix[6];
-                    m24 = matrix[7];
-                    m31 = matrix[8];
-                    m32 = matrix[9];
-                    m33 = matrix[10];
-                    m34 = matrix[11];
-                    m41 = matrix[12];
-                    m42 = matrix[13];
-                    m43 = matrix[14];
-                    m44 = matrix[15];
-                }
-                var s11 = m11 * this.m11 + m12 * this.m21 + m13 * this.m31 + m14 * this.m41;
-                var s12 = m11 * this.m21 + m12 * this.m22 + m13 * this.m32 + m14 * this.m42;
-                var s13 = m11 * this.m31 + m12 * this.m23 + m13 * this.m33 + m14 * this.m43;
-                var s14 = m11 * this.m41 + m12 * this.m24 + m13 * this.m34 + m14 * this.m44;
-                var s21 = m21 * this.m11 + m22 * this.m21 + m23 * this.m31 + m24 * this.m41;
-                var s22 = m21 * this.m21 + m22 * this.m22 + m23 * this.m32 + m24 * this.m42;
-                var s23 = m21 * this.m31 + m22 * this.m23 + m23 * this.m33 + m24 * this.m43;
-                var s24 = m21 * this.m41 + m22 * this.m24 + m23 * this.m34 + m24 * this.m44;
-                var s31 = m31 * this.m11 + m32 * this.m21 + m33 * this.m31 + m34 * this.m41;
-                var s32 = m31 * this.m21 + m32 * this.m22 + m33 * this.m32 + m34 * this.m42;
-                var s33 = m31 * this.m31 + m32 * this.m23 + m33 * this.m33 + m34 * this.m43;
-                var s34 = m31 * this.m41 + m32 * this.m24 + m33 * this.m34 + m34 * this.m44;
-                var s41 = m41 * this.m11 + m42 * this.m21 + m43 * this.m31 + m44 * this.m41;
-                var s42 = m41 * this.m21 + m42 * this.m22 + m43 * this.m32 + m44 * this.m42;
-                var s43 = m41 * this.m31 + m42 * this.m23 + m43 * this.m33 + m44 * this.m43;
-                var s44 = m41 * this.m41 + m42 * this.m24 + m43 * this.m34 + m44 * this.m44;
-                this.m11 = s11;
-                this.m12 = s12;
-                this.m13 = s13;
-                this.m14 = s14;
-                this.m21 = s21;
-                this.m22 = s22;
-                this.m23 = s23;
-                this.m24 = s24;
-                this.m31 = s31;
-                this.m32 = s32;
-                this.m33 = s33;
-                this.m34 = s34;
-                this.m41 = s41;
-                this.m42 = s42;
-                this.m43 = s43;
-                this.m44 = s44;
-                return this;
-            },
-            reset: function() {
-                this.m11 = 1;
-                this.m12 = 0;
-                this.m13 = 0;
-                this.m14 = 0;
-                this.m21 = 0;
-                this.m22 = 1;
-                this.m23 = 0;
-                this.m24 = 0;
-                this.m31 = 0;
-                this.m32 = 0;
-                this.m33 = 1;
-                this.m34 = 0;
-                this.m41 = 0;
-                this.m42 = 0;
-                this.m43 = 0;
-                this.m44 = 1;
-                return this;
-            }
-        });
-    },
-    b: function(require, module, exports, global) {
-        "use strict";
         var Point = boxspring.define("boxspring.geom.Point", {
             properties: {
                 x: {
@@ -2468,7 +2291,7 @@
             }
         });
     },
-    c: function(require, module, exports, global) {
+    b: function(require, module, exports, global) {
         "use strict";
         var Size = boxspring.define("boxspring.geom.Size", {
             properties: {
@@ -2498,7 +2321,7 @@
             }
         });
     },
-    d: function(require, module, exports, global) {
+    c: function(require, module, exports, global) {
         "use strict";
         var Rectangle = boxspring.define("boxspring.geom.Rectangle", {
             statics: {
@@ -2539,7 +2362,7 @@
             }
         });
     },
-    e: function(require, module, exports, global) {
+    d: function(require, module, exports, global) {
         "use strict";
         var Thickness = boxspring.define("boxspring.geom.Thickness", {
             properties: {
@@ -2594,7 +2417,7 @@
             }
         });
     },
-    f: function(require, module, exports, global) {
+    e: function(require, module, exports, global) {
         "use strict";
         var Position = boxspring.define("boxspring.geom.Position", {
             properties: {
@@ -2675,6 +2498,36 @@
                     break;
                 }
                 Position.parent.onPropertyChange.apply(this, arguments);
+            }
+        });
+    },
+    f: function(require, module, exports, global) {
+        "use strict";
+        var Transform = boxspring.define("boxspring.geom.Transform", {
+            properties: {
+                origin: {
+                    value: function() {
+                        return new boxspring.geom.Point;
+                    }
+                },
+                translation: {
+                    value: function() {
+                        return new boxspring.geom.Point;
+                    }
+                },
+                rotation: {
+                    value: 0
+                },
+                scale: {
+                    value: function() {
+                        return new boxspring.geom.Point(1, 1);
+                    }
+                },
+                shear: {
+                    value: function() {
+                        return new boxspring.geom.Point;
+                    }
+                }
             }
         });
     },
@@ -2763,8 +2616,7 @@
                     write: false
                 }
             },
-            constructor: function(type, bubbleable, cancelable, touches) {
-                TouchEvent.parent.constructor.apply(this, arguments);
+            setTouches: function(touches) {
                 this.__touches = touches;
                 return this;
             }
@@ -2784,6 +2636,11 @@
                     write: false
                 }
             },
+            constructor: function() {
+                Emitter.parent.constructor.call(this);
+                this.__listeners = {};
+                return this;
+            },
             addListener: function(type, listener) {
                 type = type.toLowerCase();
                 if (type === "propertychange") {
@@ -2792,14 +2649,11 @@
                         return this;
                     }
                 }
-                var listeners = this.__listeners || (this.__listeners = {});
-                var events = listeners[type];
-                if (events === undefined) {
-                    events = listeners[type] = [];
+                var listeners = this.__listeners[type];
+                if (listeners == null) {
+                    listeners = this.__listeners[type] = [];
                 }
-                if (events.indexOf(listener) === -1) {
-                    events.push(listener);
-                }
+                _.include(listeners, listener);
                 return this;
             },
             hasListener: function(type, listener) {
@@ -2810,10 +2664,9 @@
                         return this;
                     }
                 }
-                var listeners = this.__listeners || (this.__listeners = {});
-                var events = listeners[type];
-                if (events === undefined) return this;
-                return events.indexOf(listener) > -1;
+                var listeners = this.__listeners[type];
+                if (listeners == null) return false;
+                return listeners.indexOf(listener) > -1;
             },
             removeListener: function(type, listener) {
                 type = type.toLowerCase();
@@ -2823,12 +2676,9 @@
                         return this;
                     }
                 }
-                var events = this.__listeners[type];
-                if (events === undefined) return this;
-                var index = events.indexOf(listener);
-                if (index > -1) {
-                    events.splice(index, 1);
-                }
+                var listeners = this.__listeners[type];
+                if (listeners == null) return false;
+                _.remove(listeners, listener);
                 return this;
             },
             removeAllListeners: function(type) {
@@ -2853,9 +2703,9 @@
                 return this.removeListener.apply(this, arguments);
             },
             once: function(type, listener) {
-                var callback = function(e) {
+                var callback = function() {
+                    listener.apply(this, arguments);
                     this.removeListener(type, callback);
-                    listener(e);
                 };
                 return this.addListener(type, callback);
             },
@@ -2889,7 +2739,8 @@
             setParentReceiver: function(receiver) {
                 this.__parentReceiver = receiver;
                 return this;
-            }
+            },
+            __listeners: null
         });
         var slice = Array.prototype.slice;
     },
@@ -3282,7 +3133,10 @@
         var Touch = boxspring.define("boxspring.event.Touch", {
             properties: {
                 identifier: {
-                    write: false
+                    write: false,
+                    value: function() {
+                        return (UID++).toString(36);
+                    }
                 },
                 target: {
                     write: false
@@ -3293,11 +3147,6 @@
                         return new boxspring.geom.Point(0, 0);
                     }
                 }
-            },
-            constructor: function() {
-                Touch.parent.constructor.call(this);
-                this.__identifier = (UID++).toString(36);
-                return this;
             },
             setTarget: function(target) {
                 this.__target = target;
@@ -3347,15 +3196,16 @@
                     queue = this.__queues[level] = [];
                 }
                 var index = queue.indexOf(action);
-                if (index > -1) return this;
-                queue.push(action);
-                if (this.__request == null) {
-                    this.__request = requestFrame(this.bind("loop"));
+                if (index === -1) {
+                    queue.push(action);
+                    if (this.__request == null) {
+                        this.__request = requestFrame(this.bind("loop"));
+                    }
+                    if (this.__processing && this.__processingLevel >= level) {
+                        this.__reschedule = true;
+                    }
+                    this.__actions++;
                 }
-                if (this.__processing && this.__processingLevel >= level) {
-                    this.__reschedule = true;
-                }
-                this.__actions++;
                 return this;
             },
             cancel: function(action) {
@@ -3445,10 +3295,8 @@
         var ColorEvaluator = boxspring.define("boxspring.animation.ColorEvaluator", {
             inherit: boxspring.animation.TypeEvaluator,
             evaluate: function(progress, from, to) {
-                if (this.__f == null) this.__f = parse(from);
-                if (this.__t == null) this.__t = parse(to);
-                var f = this.__f;
-                var t = this.__t;
+                var f = parse(from);
+                var t = parse(to);
                 if (f.a == null) f.a = 1;
                 if (t.a == null) t.a = 1;
                 var r = Math.round(progress * (t.r - f.r) + f.r);
@@ -3457,9 +3305,7 @@
                 var a = progress * (t.a - f.a) + f.a;
                 a = Math.round(a * 100) / 100;
                 return "rgba(" + r + "," + g + "," + b + "," + a + ")";
-            },
-            __f: null,
-            __t: null
+            }
         });
     },
     "14": function(require, module, exports, global) {
@@ -3693,7 +3539,7 @@
     },
     "18": function(require, module, exports, global) {
         "use strict";
-        var AnimationRunner = boxspring.define("boxspring.animation.AnimationRunner", {
+        var AnimationScheduler = boxspring.define("boxspring.animation.AnimationScheduler", {
             statics: {
                 add: function(animation) {
                     animation.on("start", onAnimationStart);
@@ -3919,7 +3765,7 @@
     },
     "1b": function(require, module, exports, global) {
         "use strict";
-        var AnimationRunner = boxspring.animation.AnimationRunner;
+        var AnimationScheduler = boxspring.animation.AnimationScheduler;
         var AnimationGroup = boxspring.define("boxspring.animation.AnimationGroup", {
             inherits: boxspring.animation.Animation,
             properties: {
@@ -3931,12 +3777,12 @@
             },
             constructor: function() {
                 AnimationGroup.parent.constructor.call(this);
-                AnimationRunner.add(this);
+                AnimationScheduler.add(this);
                 return this;
             },
             destroy: function() {
                 _.invoke(this.__animations, "destroy");
-                AnimationRunner.remove(this);
+                AnimationScheduler.remove(this);
                 AnimationGroup.parent.destroy.call(this);
             },
             progress: function(progress) {
@@ -3961,7 +3807,7 @@
     },
     "1c": function(require, module, exports, global) {
         "use strict";
-        var AnimationRunner = boxspring.animation.AnimationRunner;
+        var AnimationScheduler = boxspring.animation.AnimationScheduler;
         var ValueAnimation = boxspring.define("boxspring.animation.ValueAnimation", {
             inherits: boxspring.animation.Animation,
             properties: {
@@ -3977,11 +3823,11 @@
             constructor: function() {
                 ValueAnimation.parent.constructor.call(this);
                 this.on("update", this.bind("onUpdate"));
-                AnimationRunner.add(this);
+                AnimationScheduler.add(this);
                 return this;
             },
             destroy: function() {
-                AnimationRunner.remove(this);
+                AnimationScheduler.remove(this);
                 this.off("update", this.bind("onUpdate"));
                 ValueAnimation.parent.destroy.call(this);
             },
@@ -4023,7 +3869,7 @@
                     var view = this.view;
                     if (view == null) return;
                     var evaluator = view.animatedPropertyEvaluator(this.property);
-                    if (evaluator == null) throw new Error("Property " + this.property + "is not animatable");
+                    if (evaluator == null) throw new Error("Property " + this.property + " is not animatable");
                     this.evaluator = evaluator;
                 }
             },
@@ -4043,7 +3889,7 @@
     },
     "1f": function(require, module, exports, global) {
         "use strict";
-        var AnimationRunner = boxspring.animation.AnimationRunner;
+        var AnimationScheduler = boxspring.animation.AnimationScheduler;
         var PropertyAnimation = boxspring.animation.PropertyAnimation;
         var ViewPropertyTransaction = boxspring.define("boxspring.animation.ViewPropertyTransaction", {
             inherits: boxspring.animation.AnimationGroup,
@@ -4538,6 +4384,10 @@
             inherits: boxspring.event.Emitter,
             statics: {
                 setupAnimation: function(duration, equation) {
+                    var root = getRootLayoutView();
+                    if (root) {
+                        root.layoutIfNeeded();
+                    }
                     var transaction = new boxspring.animation.ViewPropertyTransaction;
                     if (duration) transaction.duration = duration;
                     if (equation) transaction.equation = equation;
@@ -4549,29 +4399,10 @@
                     return transaction;
                 },
                 startAnimation: function() {
-                    var view = null;
-                    var root = null;
-                    for (var i = 0; i < animationsLayout.length; i++) {
-                        var view = animationsLayout[i];
-                        if (view instanceof boxspring.view.Window) {
-                            root = view;
-                            break;
-                        }
-                        if (view.window == null) continue;
-                        var parent = view.parent;
-                        if (parent) {
-                            while (parent) {
-                                if (parent === root) break;
-                                parent = parent.parent;
-                            }
-                        }
-                        root = view;
-                    }
+                    var root = getRootLayoutView();
                     if (root) {
                         root.layoutIfNeeded();
-                        root = null;
                     }
-                    animationsLayout.length = 0;
                     animationsRunning = animationsReading;
                     animationsReading = [];
                     _.invoke(animationsRunning, "start");
@@ -4648,7 +4479,7 @@
                 },
                 transform: {
                     value: function() {
-                        return new boxspring.geom.Matrix;
+                        return new boxspring.geom.Transform;
                     }
                 },
                 overflow: {
@@ -4691,9 +4522,6 @@
                         return new boxspring.geom.Position("auto");
                     }
                 },
-                weight: {
-                    value: 1
-                },
                 size: {
                     value: function() {
                         return new boxspring.geom.Size("fill", "fill");
@@ -4717,6 +4545,11 @@
                 measuredOffset: {
                     value: function() {
                         return new boxspring.geom.Point("none", "none");
+                    }
+                },
+                absoluteOffset: {
+                    value: function() {
+                        return new boxspring.geom.Point(0, 0);
                     }
                 }
             },
@@ -4751,6 +4584,15 @@
                 this.on("propertychange", "measuredOffset.y", onPropertyChange);
                 this.on("propertychange", "contentOffset.x", onPropertyChange);
                 this.on("propertychange", "contentOffset.y", onPropertyChange);
+                this.on("propertychange", "transform.origin.x", onPropertyChange);
+                this.on("propertychange", "transform.origin.y", onPropertyChange);
+                this.on("propertychange", "transform.translation.x", onPropertyChange);
+                this.on("propertychange", "transform.translation.y", onPropertyChange);
+                this.on("propertychange", "transform.rotation", onPropertyChange);
+                this.on("propertychange", "transform.scale.x", onPropertyChange);
+                this.on("propertychange", "transform.scale.y", onPropertyChange);
+                this.on("propertychange", "transform.shear.x", onPropertyChange);
+                this.on("propertychange", "transform.shear.y", onPropertyChange);
                 this.on("propertyanimationstart", this.bind("onPropertyAnimationStart"));
                 this.on("propertyanimationupdate", this.bind("onPropertyAnimationUpdate"));
                 this.on("propertyanimationend", this.bind("onPropertyAnimationEnd"));
@@ -4798,9 +4640,20 @@
                 this.off("propertychange", "measuredSize.y", onPropertyChange);
                 this.off("propertychange", "measuredOffset.x", onPropertyChange);
                 this.off("propertychange", "measuredOffset.y", onPropertyChange);
+                this.off("propertychange", "contentOffset.x", onPropertyChange);
+                this.off("propertychange", "contentOffset.y", onPropertyChange);
+                this.off("propertychange", "transform.origin.x", onPropertyChange);
+                this.off("propertychange", "transform.origin.y", onPropertyChange);
+                this.off("propertychange", "transform.translation.x", onPropertyChange);
+                this.off("propertychange", "transform.translation.y", onPropertyChange);
+                this.off("propertychange", "transform.rotation", onPropertyChange);
+                this.off("propertychange", "transform.scale.x", onPropertyChange);
+                this.off("propertychange", "transform.scale.y", onPropertyChange);
                 this.off("propertyanimationstart", this.bind("onPropertyAnimationStart"));
                 this.off("propertyanimationupdate", this.bind("onPropertyAnimationUpdate"));
                 this.off("propertyanimationend", this.bind("onPropertyAnimationEnd"));
+                this.off("layout", this.bind("onLayout"));
+                this.off("redraw", this.bind("onRedraw"));
                 this.off("add", this.bind("onAdd"));
                 this.off("remove", this.bind("onRemove"));
                 this.off("addtoparent", this.bind("onAddToParent"));
@@ -4936,6 +4789,24 @@
                         return this.measuredOffset.x;
                       case "measuredOffset.y":
                         return this.measuredOffset.y;
+                      case "transform.translation.x":
+                        return this.transform.translation.x;
+                      case "transform.translation.y":
+                        return this.transform.translation.y;
+                      case "transform.rotation":
+                        return this.transform.rotation;
+                      case "transform.scale.x":
+                        return this.transform.scale.x;
+                      case "transform.scale.y":
+                        return this.transform.scale.y;
+                      case "transform.shear.x":
+                        return this.transform.shear.x;
+                      case "transform.shear.y":
+                        return this.transform.shear.y;
+                      case "transform.origin.x":
+                        return this.transform.origin.x;
+                      case "transform.origin.y":
+                        return this.transform.origin.y;
                     }
                 }
                 return value;
@@ -4962,6 +4833,15 @@
                   case "measuredOffset.y":
                   case "contentOffset.x":
                   case "contentOffset.y":
+                  case "transform.origin.x":
+                  case "transform.origin.y":
+                  case "transform.translation.x":
+                  case "transform.translation.y":
+                  case "transform.rotation":
+                  case "transform.scale.x":
+                  case "transform.scale.y":
+                  case "transform.shear.x":
+                  case "transform.shear.y":
                     return new boxspring.animation.NumberEvaluator;
                 }
                 return null;
@@ -4979,12 +4859,17 @@
                 return scheduleLayoutProperties.indexOf(property) !== -1;
             },
             scheduleRedraw: function() {
-                this.__needsRedraw = true;
+                if (this.__needsRedraw === false) {
+                    this.__needsRedraw = true;
+                    viewRedrawList.push(this);
+                }
                 return this;
             },
             scheduleLayout: function() {
-                this.__needsLayout = true;
-                if (animationsReading.length) _.include(animationsLayout, this);
+                if (this.__needsLayout === false) {
+                    this.__needsLayout = true;
+                    viewLayoutList.push(this);
+                }
                 return this;
             },
             scheduleReflow: function() {
@@ -4997,6 +4882,7 @@
                     this.__needsRedraw = false;
                     this.redraw(context);
                     this.emit("redraw", context);
+                    _.remove(this, viewRedrawList);
                 }
                 return this;
             },
@@ -5010,6 +4896,7 @@
                     this.__needsLayout = false;
                     this.layout();
                     this.emit("layout");
+                    _.remove(this, viewLayoutList);
                 }
                 _.invoke(this.__children, "layoutIfNeeded");
                 return this;
@@ -5030,6 +4917,17 @@
                 if (this.redrawOnPropertyChange(property)) this.scheduleRedraw();
                 if (this.layoutOnPropertyChange(property)) this.scheduleLayout();
                 if (this.reflowOnPropertyChange(property)) this.scheduleReflow();
+                var parent = this.parent;
+                if (parent) {
+                    switch (property) {
+                      case "measuredOffset.x":
+                        this.absoluteOffset.x = parent.absoluteOffset.x + newValue;
+                        break;
+                      case "measuredOffset.y":
+                        this.absoluteOffset.y = parent.absoluteOffset.y + newValue;
+                        break;
+                    }
+                }
                 var animation = _.last(animationsReading);
                 if (animation) {
                     if (this.propertyIsAnimatable(property)) {
@@ -5100,12 +4998,51 @@
             __needsLayout: false,
             __animatedPropertyValues: null
         });
-        var scheduleReflowProperties = [ "size.x", "size.y", "minSize.x", "minSize.y", "maxSize.x", "maxSize.y", "visible", "margin.top", "margin.left", "margin.right", "margin.bottom", "position.top", "position.left", "position.right", "position.bottom" ];
+        var viewLayoutList = [];
+        var viewRedrawList = [];
+        var getRootLayoutView = function() {
+            var root = null;
+            for (var i = 0; i < viewLayoutList.length; i++) {
+                var view = viewLayoutList[i];
+                if (view instanceof boxspring.view.Window) return view;
+                if (view.window == null) continue;
+                var assign = true;
+                var parent = view.parent;
+                while (parent) {
+                    if (parent === root) {
+                        assign = false;
+                        break;
+                    }
+                    parent = parent.parent;
+                }
+                if (assign) root = view;
+            }
+            return root;
+        };
+        var getRootRedrawView = function() {
+            var root = null;
+            for (var i = 0; i < viewRedrawList.length; i++) {
+                var view = viewRedrawList[i];
+                if (view instanceof boxspring.view.Window) return view;
+                if (view.window == null) continue;
+                var assign = true;
+                var parent = view.parent;
+                while (parent) {
+                    if (parent === root) {
+                        assign = false;
+                        break;
+                    }
+                    parent = parent.parent;
+                }
+                if (assign) root = view;
+            }
+            return root;
+        };
+        var scheduleReflowProperties = [ "size.x", "size.y", "minSize.x", "minSize.y", "maxSize.x", "maxSize.y", "visible", "margin.top", "margin.left", "margin.right", "margin.bottom" ];
         var scheduleLayoutProperties = [ "contentLayout", "measuredSize.x", "measuredSize.y", "borderWidth", "padding.top", "padding.left", "padding.right", "padding.bottom" ];
-        var animatableProperties = [ "backgroundColor", "borderColor", "shadowColor", "backgroundImage", "backgroundSize.x", "backgroundSize.y", "borderWidth", "borderRadius", "shadowBlur", "shadowOffset.x", "shadowOffset.y", "opacity", "measuredSize.x", "measuredSize.y", "measuredOffset.x", "measuredOffset.y", "contentOffset.x", "contentOffset.y" ];
+        var animatableProperties = [ "backgroundColor", "borderColor", "shadowColor", "backgroundImage", "backgroundSize.x", "backgroundSize.y", "borderWidth", "borderRadius", "shadowBlur", "shadowOffset.x", "shadowOffset.y", "opacity", "measuredSize.x", "measuredSize.y", "measuredOffset.x", "measuredOffset.y", "contentOffset.x", "contentOffset.y", "transform.origin.x", "transform.origin.y", "transform.translation.x", "transform.translation.y", "transform.rotation", "transform.scale.x", "transform.scale.y", "transform.shear.x", "transform.shear.y" ];
         var animationsReading = [];
         var animationsRunning = [];
-        var animationsLayout = [];
     },
     "1m": function(require, module, exports, global) {
         "use strict";
@@ -5132,7 +5069,7 @@
             redrawOnPropertyChange: function(property) {
                 return scheduleRedrawProperties.indexOf(property) !== -1;
             },
-            scheduleRender: function(force) {
+            scheduleRender: function() {
                 var RenderLoop = boxspring.render.RenderLoop;
                 var status = View.animationStatus();
                 if (this.__needsRender && status !== "running") return this;
@@ -5176,7 +5113,7 @@
             onPropertyAnimationUpdate: function(property, value) {
                 View.parent.onPropertyAnimationUpdate.apply(this, arguments);
                 if (this.redrawOnPropertyChange(property)) this.scheduleRedraw();
-                if (this.renderOnPropertyChange(property)) this.scheduleRender(true);
+                if (this.renderOnPropertyChange(property)) this.scheduleRender();
             },
             __needsRender: false,
             __needsShadow: false,
@@ -5243,7 +5180,7 @@
             },
             __redrawShadow: function(context, area) {}
         });
-        var scheduleRenderProperties = [ "measuredSize", "measuredSize.x", "measuredSize.y", "measuredOffset", "measuredOffset.x", "measuredOffset.y", "contentOffset.x", "contentOffset.y", "transform", "overflow", "opacity" ];
+        var scheduleRenderProperties = [ "measuredSize", "measuredSize.x", "measuredSize.y", "measuredOffset", "measuredOffset.x", "measuredOffset.y", "contentOffset.x", "contentOffset.y", "transform.values", "transform.origin.x", "transform.origin.y", "transform.translation.x", "transform.translation.y", "transform.rotation", "transform.scale.x", "transform.scale.y", "transform.shear.x", "transform.shear.y", "overflow", "opacity" ];
         var scheduleRedrawProperties = [ "backgroundColor", "backgroundImage", "backgroundRepeat", "backgroundClip", "backgroundSize", "backgroundSize.x", "backgroundSize.y", "borderRadius", "borderColor", "borderWidth", "shadowBlur", "shadowColor", "shadowOffset", "shadowOffset.x", "shadowOffset.y" ];
         var renderCaches = {};
         var shadowCaches = {};
@@ -5255,10 +5192,9 @@
             if (root.size.x === "auto") updateDisplayRoot.measuredSize.x = window.innerWidth;
             if (root.size.y === "auto") updateDisplayRoot.measuredSize.y = window.innerHeight;
             screenContext.clearRect(0, 0, screenCanvas.width, screenCanvas.height);
-            console.log("Update Display");
             composite(updateDisplayRoot, screenContext, 0, 0);
         };
-        var composite = function(view, screen, offsetX, offsetY) {
+        var composite = function(view, screen) {
             if (view.__needsLayout) view.layoutIfNeeded();
             var contentOffsetX = 0;
             var contentOffsetY = 0;
@@ -5269,11 +5205,26 @@
             }
             var viewSizeX = view.animatedPropertyValue("measuredSize.x");
             var viewSizeY = view.animatedPropertyValue("measuredSize.y");
-            var viewOffsetX = view.animatedPropertyValue("measuredOffset.x") + offsetX + contentOffsetX;
-            var viewOffsetY = view.animatedPropertyValue("measuredOffset.y") + offsetY + contentOffsetY;
+            var viewOffsetX = view.animatedPropertyValue("measuredOffset.x") + contentOffsetX;
+            var viewOffsetY = view.animatedPropertyValue("measuredOffset.y") + contentOffsetY;
             var viewOpacity = view.animatedPropertyValue("opacity");
+            var originX = view.animatedPropertyValue("transform.origin.x");
+            var originY = view.animatedPropertyValue("transform.origin.y");
+            var translateX = view.animatedPropertyValue("transform.translation.x");
+            var translateY = view.animatedPropertyValue("transform.translation.y");
+            var rotate = view.animatedPropertyValue("transform.rotation");
+            var scaleX = view.animatedPropertyValue("transform.scale.x");
+            var scaleY = view.animatedPropertyValue("transform.scale.y");
+            var shearX = view.animatedPropertyValue("transform.shear.x");
+            var shearY = view.animatedPropertyValue("transform.shear.y");
             screen.save();
             screen.globalAlpha = screen.globalAlpha * viewOpacity;
+            screen.translate(viewOffsetX, viewOffsetY);
+            screen.translate(translateX, translateY);
+            screen.translate(originX, originY);
+            screen.rotate(rotate);
+            screen.scale(scaleX, scaleY);
+            screen.translate(-originX, -originY);
             var r1x1 = 0;
             var r1x2 = 0 + updateDisplayRoot.measuredSize.x;
             var r1y1 = 0;
@@ -5304,11 +5255,11 @@
                 }
                 if (view.overflow === "hidden") {}
                 if (viewSizeX > 0 && viewSizeY > 0 && cache.width > 0 && cache.height > 0) {
-                    screen.drawImage(cache, 0, 0, cache.width, cache.height, viewOffsetX, viewOffsetY, viewSizeX, viewSizeY);
+                    screen.drawImage(cache, 0, 0, cache.width, cache.height, 0, 0, viewSizeX, viewSizeY);
                 }
             }
             var children = view.__children;
-            for (var i = 0; i < children.length; i++) composite(children[i], screen, viewOffsetX, viewOffsetY);
+            for (var i = 0; i < children.length; i++) composite(children[i], screen);
             screen.restore();
         };
         var createRectPath = function(context, originX, originY, sizeX, sizeY, radius) {
@@ -5355,6 +5306,33 @@
                 screenCanvas.height = window.innerHeight;
             });
         });
+        var length = function(a) {
+            return Math.sqrt(a[0] * a[0] + a[1] * a[1]);
+        };
+        var normalize = function(a) {
+            var l = length(a);
+            return l ? [ a[0] / l, a[1] / l ] : [ 0, 0 ];
+        };
+        var dot = function(a, b) {
+            return a[0] * b[0] + a[1] * b[1];
+        };
+        var atan2 = Math.atan2;
+        var combine = function(a, b, ascl, bscl) {
+            return [ ascl * a[0] + bscl * b[0], ascl * a[1] + bscl * b[1] ];
+        };
+        var unmatrix = function(a, b, c, d, tx, ty) {
+            if (a * d - b * c === 0) return false;
+            var translate = [ tx, ty ];
+            var m = [ [ a, b ], [ c, d ] ];
+            var scale = [ length(m[0]) ];
+            m[0] = normalize(m[0]);
+            var skew = dot(m[0], m[1]);
+            m[1] = combine(m[1], m[0], 1, -skew);
+            scale[1] = length(m[1]);
+            skew /= scale[1];
+            var rotate = atan2(m[0][1], m[0][0]);
+            return [ translate, rotate, scale, skew ];
+        };
     },
     "1n": function(require, module, exports, global) {
         "use strict";
@@ -5383,7 +5361,9 @@
                     this.contentLayout.layout();
                 }
                 return this;
-            }
+            },
+            scrollTo: function() {},
+            scrollBy: function() {}
         });
     },
     "1o": function(require, module, exports, global) {

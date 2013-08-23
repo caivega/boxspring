@@ -8,7 +8,10 @@
 </head>
 <body>
 	<style>
+		html,
 		body {
+			height: 100%;
+			width: 100%;
 			margin: 0px;
 			padding: 0px;
 		}
@@ -23,6 +26,7 @@
 		document.addEventListener('touchstart', function(e) {
 			e.preventDefault()
 		})
+
 
 
 		var View   = boxspring.view.View
@@ -50,49 +54,41 @@
 
 		var forwarder = new boxspring.event.TouchForwarder(root)
 
+		// ---------------------------------------------------------------------
+		// Rotation Animation Demo
+		// ---------------------------------------------------------------------
+		/*
 		var view = createView()
 		view.position.x = 100
 		view.position.y = 100
 		view.size.x = 100
 		view.size.y = 100
+		view.contentLayout.horizontalAlignment = 'center'
+		view.contentLayout.verticalAlignment = 'center'
 		root.addChild(view)
 
-		var color = view.backgroundColor
-		var touch = false
+		var axis = createView()
+		axis.size.y = 10
+		axis.size.x = 'fill'
+		view.addChild(axis)
 
-		var offsetX = 0
-		var offsetY = 0
+		view.transform.origin.x = 50
+		view.transform.origin.y = 50
 
 		view.on('touchstart', function(touches, e) {
-			offsetX = touches[0].location.x - view.measuredOffset.x
-			offsetY = touches[0].location.y - view.measuredOffset.y
-
-			touch = true
-
-			View.setupAnimation()
-			view.backgroundColor = 'blue'
+			View.setupAnimation(500)
+			view.transform.rotation += Math.PI * 2
+			view.transform.scale.x += 0.5
+			view.transform.scale.y += 0.5
+			view.transform.translation.x += 10
+			view.transform.translation.y += 10
 			View.startAnimation()
 		})
-
-		view.on('touchend', function(touches, e) {
-
-			View.setupAnimation()
-			view.backgroundColor = color
-			View.startAnimation()
-
-			touch = false
-		})
-
-		view.on('touchmove', function(touches, e) {
-			view.position.x = touches[0].location.x - offsetX
-			view.position.y = touches[0].location.y - offsetY
-		})
-
-
-		//
+		*/
+		//----------------------------------------------------------------------
 		// Animations
-		//
-/*
+		//----------------------------------------------------------------------
+
 		for (var i = 0; i < 5; i++) {
 			var view = createView()
 			view.size.x = 'fill'
@@ -100,30 +96,23 @@
 			root.addChild(view)
 		}
 
-		var animate = function() {
+		root.on('touchstart', function() {
 
 			var view = createView()
 			view.size.y = 0
-
+			view.size.x = 'fill'
 			root.addChild(view)
-
-
-
-
 
 			View.setupAnimation(1200)
 			view.size.y = 'fill'
 			//root.contentLayout.orientation = root.contentLayout.orientation === 'horizontal' ? 'vertical' : 'horizontal'
 			View.startAnimation()
-		}
+		})
 
-		document.addEventListener('touchend', animate)
-*/
+		//----------------------------------------------------------------------
+		// Scroll Demo
+		//----------------------------------------------------------------------
 /*
-		//
-		//
-		//
-
 		var scrollview = new boxspring.view.ScrollView()
 		scrollview.backgroundColor = 'rgba(255, 0, 0, 0.5)'
 		scrollview.name = 'Scroll View'
@@ -153,8 +142,8 @@
 			// sub.name = 'View' + i + '--- SUB'
 			// view.addChild(sub)
 		}
-
 */
+
 	</script>
 
 </body>

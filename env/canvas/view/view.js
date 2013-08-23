@@ -56,7 +56,7 @@ var View = boxspring.override('boxspring.view.View', {
 	 * @method scheduleRender
 	 * @since 0.9
 	 */
-	scheduleRender: function(force) {
+	scheduleRender: function() {
 
 		var RenderLoop = boxspring.render.RenderLoop
 
@@ -147,7 +147,7 @@ var View = boxspring.override('boxspring.view.View', {
 	onPropertyAnimationUpdate: function(property, value) {
 		View.parent.onPropertyAnimationUpdate.apply(this, arguments)
 		if (this.redrawOnPropertyChange(property)) this.scheduleRedraw()
-		if (this.renderOnPropertyChange(property)) this.scheduleRender(true)
+		if (this.renderOnPropertyChange(property)) this.scheduleRender()
 	},
 
 	//--------------------------------------------------------------------------
@@ -289,7 +289,17 @@ var scheduleRenderProperties = [
 	'measuredOffset.y',
 	'contentOffset.x',
 	'contentOffset.y',
-	'transform',
+	'transform.values',
+	'transform.origin.x',
+	'transform.origin.y',
+	'transform.translation.x',
+	'transform.translation.y',
+	'transform.rotation',
+	'transform.scale.x',
+	'transform.scale.y',
+	'transform.shear.x',
+	'transform.shear.y',
+
 	'overflow',
 	'opacity'
 ]
@@ -318,11 +328,17 @@ var scheduleRedrawProperties = [
 ]
 
 /**
- * @brief Rendering caches.
+ * @brief View render caches.
  * @scope hidden
  * @since 0.9
  */
 var renderCaches = {}
+
+/**
+ * @brief View shadow caches.
+ * @scope hidden
+ * @since 0.9
+ */
 var shadowCaches = {}
 
 /**
@@ -360,8 +376,6 @@ var updateDisplay = function() {
 		screenCanvas.height
 	)
 
-console.log('Update Display')
-
 	composite(updateDisplayRoot, screenContext, 0, 0)
 }
 
@@ -370,7 +384,7 @@ console.log('Update Display')
  * @scope hidden
  * @since 0.9
  */
-var composite = function(view, screen, offsetX, offsetY) {
+var composite = function(view, screen) {
 
 	if (view.__needsLayout) view.layoutIfNeeded()
 
@@ -385,14 +399,39 @@ var composite = function(view, screen, offsetX, offsetY) {
 
 	var viewSizeX = view.animatedPropertyValue('measuredSize.x')
 	var viewSizeY = view.animatedPropertyValue('measuredSize.y')
-	var viewOffsetX = view.animatedPropertyValue('measuredOffset.x') + offsetX + contentOffsetX
-	var viewOffsetY = view.animatedPropertyValue('measuredOffset.y') + offsetY + contentOffsetY
+	var viewOffsetX = view.animatedPropertyValue('measuredOffset.x') + contentOffsetX
+	var viewOffsetY = view.animatedPropertyValue('measuredOffset.y') + contentOffsetY
 	var viewOpacity = view.animatedPropertyValue('opacity')
+
+	var originX = view.animatedPropertyValue('transform.origin.x')
+	var originY = view.animatedPropertyValue('transform.origin.y')
+
+	var translateX = view.animatedPropertyValue('transform.translation.x')
+	var translateY = view.animatedPropertyValue('transform.translation.y')
+	var rotate = view.animatedPropertyValue('transform.rotation')
+	var scaleX = view.animatedPropertyValue('transform.scale.x')
+	var scaleY = view.animatedPropertyValue('transform.scale.y')
+	var shearX = view.animatedPropertyValue('transform.shear.x')
+	var shearY = view.animatedPropertyValue('transform.shear.y')
 
 	screen.save()
 	screen.globalAlpha = screen.globalAlpha * viewOpacity;
+	screen.translate(viewOffsetX, viewOffsetY)
 
-	// TODO make with bounds rectangle object
+	screen.translate(translateX, translateY)
+	screen.translate(originX, originY)
+	screen.rotate(rotate)
+	screen.scale(scaleX, scaleY)
+	// screen.transform(
+	// 	matrix[0], matrix[3], matrix[1],
+	// 	matrix[4], matrix[2], matrix[5]
+	// )
+	screen.translate(-originX, -originY)
+
+	//
+	// TODO make with bounds rectangle object and test when transform applied
+	//
+
 	var r1x1 = 0
 	var r1x2 = 0 + updateDisplayRoot.measuredSize.x
 	var r1y1 = 0
@@ -417,38 +456,31 @@ var composite = function(view, screen, offsetX, offsetY) {
 			view.scheduleRedraw()
 		}
 
-			view.__needsRender = false
+		view.__needsRender = false
 
-			if (view.__needsRedraw) {
-				var context = cache.getContext('2d')
-				context.save()
-				context.clearRect(0, 0, view.measuredSize.x, view.measuredSize.y)
-				view.redrawIfNeeded(context)
-				context.restore()
-			}
+		if (view.__needsRedraw) {
+			var context = cache.getContext('2d')
+			context.save()
+			context.clearRect(0, 0, view.measuredSize.x, view.measuredSize.y)
+			view.redrawIfNeeded(context)
+			context.restore()
+		}
 
-
+		//
 		// TODO overflow with offscreen canvas
+		//
+
 		if (view.overflow === 'hidden') {
-			// screen.rect(offsetX, offsetY, sizeX, sizeY)
-			// screen.clip()
+
 		}
 
 		if (viewSizeX > 0 && viewSizeY > 0 && cache.width > 0 && cache.height > 0) {
-			screen.drawImage(
-				cache, 0, 0,
-				cache.width,
-				cache.height,
-				viewOffsetX,
-				viewOffsetY,
-				viewSizeX,
-				viewSizeY
-			)
+			screen.drawImage(cache, 0, 0, cache.width, cache.height, 0, 0, viewSizeX, viewSizeY)
 		}
 	}
 
 	var children = view.__children
-	for (var i = 0; i < children.length; i++) composite(children[i], screen, viewOffsetX, viewOffsetY)
+	for (var i = 0; i < children.length; i++) composite(children[i], screen)
 
 	screen.restore()
 }
@@ -529,3 +561,82 @@ document.addEventListener("DOMContentLoaded", function(event) {
 		screenCanvas.height = window.innerHeight
 	})
 })
+
+
+
+
+
+
+
+
+
+
+
+
+// returns the length of the passed vector
+
+var length = function(a){
+    return Math.sqrt(a[0] * a[0] + a[1] * a[1])
+}
+
+// normalizes the length of the passed point to 1
+
+var normalize = function(a){
+    var l = length(a)
+    return l ? [a[0] / l, a[1] / l] : [0, 0]
+}
+
+// returns the dot product of the passed points
+
+var dot = function(a, b){
+    return a[0] * b[0] + a[1] * b[1]
+}
+
+// returns the principal value of the arc tangent of
+// y/x, using the signs of both arguments to determine
+// the quadrant of the return value
+
+var atan2 = Math.atan2
+
+var combine = function(a, b, ascl, bscl){
+    return [
+        (ascl * a[0]) + (bscl * b[0]),
+        (ascl * a[1]) + (bscl * b[1])
+    ]
+}
+
+var unmatrix = function(a, b, c, d, tx, ty){
+
+    // Make sure the matrix is invertible
+    if ((a * d - b * c) === 0) return false
+
+    // Take care of translation
+
+    var translate = [tx, ty]
+
+    // Put the components into a 2x2 matrix
+    var m = [[a, b], [c, d]]
+
+    // Compute X scale factor and normalize first row.
+
+    var scale = [length(m[0])]
+    m[0] = normalize(m[0])
+
+    // Compute shear factor and make 2nd row orthogonal to 1st.
+
+    var skew = dot(m[0], m[1])
+    m[1] = combine(m[1], m[0], 1, -skew)
+
+    // Now, compute Y scale and normalize 2nd row.
+
+    scale[1] = length(m[1])
+    // m[1] = normalize(m[1]) //
+    skew /= scale[1]
+
+    // Now, get the rotation out
+
+    var rotate = atan2(m[0][1], m[0][0])
+
+    return [translate, rotate, scale, skew]
+
+}

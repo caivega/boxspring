@@ -1,24 +1,75 @@
 TODO
 ================================================================================
 
-- View add and remove event, also pass the parent
+- __absoluteOffset calculated when measuredOffset changes
 
-- Think about naming layout content and Layout to somethingelse
+- Finish matrix transform - Add Shearing
 
-- ScheduleRedraw retoure dans la base background-url(:canvas)
+- Transform - Add Origin
 
-- put @private @static at the end
+- Improve performance for object.set and object.get methods
 
-- Rename LinearLayout to Flexible Layout
+- Notify property change listeners for non-writable properties
+
+- Draw view shadow
+
+- Improve drawing algorithm on canvas
+
+- ResponsiveLayout
+
+- View addGestureRecogniser
+
+- GestureRecogniser
+
+- Fork ZyngaScroller, make it packageable
+
+- Controls
+    - Button
+    - NavigationBar
+    - TabBar
+
+- Label
+
+- TextView
+
+- ScrollView
+    - directions
+
+- Direction object
+
+- Image
+- ImageMap
+
+- ViewStyle
+
+- Controller
+
+- Canvas
+
+- Touch class has an absolutePosition and relativePosition target
+    - method to calculate position relative to a view
+
+- Think about view controller transition / view transition
+
+- When a view adds or remove a child, also pass the owner to the event
+
+- Integrate prime
+
 - Detect if the layout has to be entirely recalculated
 
 - Add a center property to the Position class.
 
-- Add a private variable in the view class to detect if the measuredOffset and measuredSize were set
-
 - Any call to the render loop should be cancelled when beginTransition starts
 
 - Find a better way to share if a view is being transitioned
+
+
+Done
+================================================================================
+
+- Rename LinearLayout to Flexible Layout
+- X Think about naming layout content and Layout to somethingelse
+- Add a private variable in the view class to detect if the measuredOffset and measuredSize were set
 
 - WTF:
             var root = new boxspring.view.Window()
@@ -26,29 +77,3 @@ TODO
             root.orientation = 'vertical'
             root.size.x = 'auto'
             root.size.y = 'auto' // AUTO ?
-
-Documentation
---------------------------------------------------------------------------------
- - Remove @super tag, add a @inherit tag over the inherit property
- - Fix comments in:
-
-    /**
-     * The animation that are running.
-     * @method __animations
-     * @private
-     */
-    __animations: null,
-
-    /**
-     * The area to redraw on the view.
-     * @method __redrawArea
-     * @private
-     */
-    __redrawArea: null,
-
-    /**
-     * Whether the view needs to be redrawn.
-     * @method __needsRedraw
-     * @private
-     */
-    __needsRedraw: false,
