@@ -377,6 +377,8 @@ var updateDisplay = function() {
 	)
 
 	composite(updateDisplayRoot, screenContext, 0, 0)
+
+	showFPS()
 }
 
 /**
@@ -513,9 +515,11 @@ var createRectPath = function(context, originX, originY, sizeX, sizeY, radius) {
 	return this
 }
 
-var showFPS = function() {
 	var lastCalledTime;
 var fps;
+
+var showFPS = function() {
+
 	if (!lastCalledTime) {
 		lastCalledTime = new Date().getTime();
 		fps = 0;

@@ -2167,36 +2167,25 @@
             },
             onPropertyChange: function(target, property, newValue, oldValue, e) {},
             __propertyListeners: null,
-            __propertyObservers: null,
-            __propertyCaches: null
+            __propertyObservers: null
         });
         var UID = 0;
+        var setterCaches = {};
+        var getterCaches = {};
         var set = function(object, path, value) {
-            var cache = object.__propertyCaches;
-            forPath(object, path, function(owner, item, name, head, tail) {
-                if (tail === "") {
-                    owner[name] = value;
-                    cache[path] = {
-                        owner: owner,
-                        key: name
-                    };
-                }
-            });
+            var cache = setterCaches[path];
+            if (cache == null) {
+                cache = setterCaches[path] = new Function("object", "value", "object." + path + " = value");
+            }
+            cache.call(null, object, value);
             return object;
         };
         var get = function(object, path) {
-            var cache = object.__propertyCaches;
-            var value = null;
-            forPath(object, path, function(owner, item, name, head, tail) {
-                if (tail === "") {
-                    value = owner[name];
-                    cache[path] = {
-                        owner: owner,
-                        key: name
-                    };
-                }
-            });
-            return value;
+            var cache = setterCaches[path];
+            if (cache == null) {
+                cache = setterCaches[path] = new Function("object", "return object." + path);
+            }
+            return cache.call(null, object);
         };
         var forPath = function(object, path, callback, context) {
             var head = [];
@@ -4756,58 +4745,7 @@
             animatedPropertyValue: function(property) {
                 var value = this.__animatedPropertyValues[property];
                 if (value == null) {
-                    switch (property) {
-                      case "backgroundColor":
-                        return this.backgroundColor;
-                      case "backgroundImage":
-                        return this.backgroundImage;
-                      case "backgroundSize.x":
-                        return this.backgroundSize.x;
-                      case "backgroundSize.y":
-                        return this.backgroundSize.y;
-                      case "borderColor":
-                        return this.borderColor;
-                      case "borderWidth":
-                        return this.borderWidth;
-                      case "borderRadius":
-                        return this.borderRadius;
-                      case "shadowBlur":
-                        return this.shadowBlur;
-                      case "shadowColor":
-                        return this.shadowColor;
-                      case "shadowOffset.x":
-                        return this.shadowOffset.x;
-                      case "shadowOffset.y":
-                        return this.shadowOffset.y;
-                      case "opacity":
-                        return this.opacity;
-                      case "measuredSize.x":
-                        return this.measuredSize.x;
-                      case "measuredSize.y":
-                        return this.measuredSize.y;
-                      case "measuredOffset.x":
-                        return this.measuredOffset.x;
-                      case "measuredOffset.y":
-                        return this.measuredOffset.y;
-                      case "transform.translation.x":
-                        return this.transform.translation.x;
-                      case "transform.translation.y":
-                        return this.transform.translation.y;
-                      case "transform.rotation":
-                        return this.transform.rotation;
-                      case "transform.scale.x":
-                        return this.transform.scale.x;
-                      case "transform.scale.y":
-                        return this.transform.scale.y;
-                      case "transform.shear.x":
-                        return this.transform.shear.x;
-                      case "transform.shear.y":
-                        return this.transform.shear.y;
-                      case "transform.origin.x":
-                        return this.transform.origin.x;
-                      case "transform.origin.y":
-                        return this.transform.origin.y;
-                    }
+                    return this.get(property);
                 }
                 return value;
             },
@@ -5193,6 +5131,7 @@
             if (root.size.y === "auto") updateDisplayRoot.measuredSize.y = window.innerHeight;
             screenContext.clearRect(0, 0, screenCanvas.width, screenCanvas.height);
             composite(updateDisplayRoot, screenContext, 0, 0);
+            showFPS();
         };
         var composite = function(view, screen) {
             if (view.__needsLayout) view.layoutIfNeeded();
@@ -5280,9 +5219,9 @@
             context.closePath();
             return this;
         };
+        var lastCalledTime;
+        var fps;
         var showFPS = function() {
-            var lastCalledTime;
-            var fps;
             if (!lastCalledTime) {
                 lastCalledTime = (new Date).getTime();
                 fps = 0;

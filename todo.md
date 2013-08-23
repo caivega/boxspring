@@ -1,6 +1,32 @@
 TODO
 ================================================================================
 
+unit system
+ "50%"
+ "50% of offset.x"
+
+Think about the "content" property
+
+class ContentLayout ?
+      Content ?
+
+    offset.x
+    offset.y
+    size.x
+    size.y
+    layout()
+    orientation
+    alignment.x
+    alignment.y
+
+class Alignment ?
+class Direction ?
+
+class Transform
+
+    convert() ?
+    matrix() ?
+
 - __absoluteOffset calculated when measuredOffset changes
 
 - Finish matrix transform - Add Shearing
