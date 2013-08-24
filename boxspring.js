@@ -4024,7 +4024,146 @@
                     }
                 }
             },
+            __simple__layout__: function(view, children) {
+                var contentSizeX = this.size.x;
+                var contentSizeY = this.size.y;
+                var usedSpace = 0;
+                var freeSpace = contentSizeX;
+                var fluidItems = [];
+                var fluidSpace = 0;
+                var fluidCount = 0;
+                for (var i = 0; i < children.length; i++) {
+                    var child = children[i];
+                    var positionT = child.position.top;
+                    var positionL = child.position.left;
+                    var positionR = child.position.right;
+                    var positionB = child.position.bottom;
+                    var sizeX = child.size.x;
+                    var sizeY = child.size.y;
+                    var maxSizeX = child.maxSize.x;
+                    var maxSizeY = child.maxSize.y;
+                    var minSizeX = child.minSize.x;
+                    var minSizeY = child.minSize.y;
+                    var measuredSizeX = sizeX === "fill" ? contentSizeX : sizeX;
+                    var measuredSizeY = sizeY === "fill" ? contentSizeY : sizeY;
+                    var measuredOffsetX = 0;
+                    var measuredOffsetY = 0;
+                    if (positionT !== "auto" || positionB !== "auto" || positionL !== "auto" || positionR !== "auto") {
+                        if (positionL !== "auto" && positionR !== "auto") {
+                            measuredSizeX = contentSizeX - positionL - positionR;
+                        }
+                        if (positionT !== "auto" && positionB !== "auto") {
+                            measuredSizeY = contentSizeY - positionT - positionB;
+                        }
+                        if (maxSizeX !== "none" && measuredSizeX > maxSizeX) measuredSizeX = maxSizeX;
+                        if (minSizeX !== "none" && measuredSizeX < minSizeX) measuredSizeX = minSizeX;
+                        if (maxSizeY !== "none" && measuredSizeY > maxSizeY) measuredSizeY = maxSizeY;
+                        if (minSizeY !== "none" && measuredSizeY < minSizeY) measuredSizeY = minSizeY;
+                        if (positionL !== "auto") {
+                            measuredOffsetX = positionL;
+                        } else if (positionR !== "auto") {
+                            measuredOffsetX = frameSizeX - measuredSizeX;
+                        }
+                        if (positionT !== "auto") {
+                            measuredOffsetY = positionT;
+                        } else if (positionB !== "auto") {
+                            measuredOffsetY = frameSizeY - measuredSizeY;
+                        }
+                        view.measuredSize.x = measuredSizeX;
+                        view.measuredSize.y = measuredSizeY;
+                        view.measuredOffset.x = measuredOffsetX + frameOffsetX;
+                        view.measuredOffset.y = measuredOffsetY + frameOffsetY;
+                        continue;
+                    }
+                    if (maxSizeX !== "none" && measuredSizeX > maxSizeX) measuredSizeX = maxSizeX;
+                    if (minSizeX !== "none" && measuredSizeX < minSizeX) measuredSizeX = minSizeX;
+                    if (maxSizeY !== "none" && measuredSizeY > maxSizeY) measuredSizeY = maxSizeY;
+                    if (minSizeY !== "none" && measuredSizeY < minSizeY) measuredSizeY = minSizeY;
+                    if (sizeY === "fill") {
+                        fluidItems.push(child);
+                    } else {
+                        var space = measuredSizeY;
+                        freeSpace -= space;
+                        usedSpace += space;
+                    }
+                    child.measuredSize.x = measuredSizeX;
+                    child.measuredSize.y = measuredSizeY;
+                }
+                fluidCount = fluidItems.length;
+                fluidSpace = freeSpace / fluidCount;
+                for (var i = 0; i < fluidItems.length; i++) {
+                    var child = fluidItems[i];
+                    var maxSizeY = child.maxSize.y;
+                    var minSizeY = child.minSize.y;
+                    if (maxSizeY === "none") continue;
+                    var space = fluidSpace;
+                    if (maxSizeY !== "none" && space > maxSizeY) space = maxSizeY;
+                    if (minSizeY !== "none" && space < minSizeY) space = minSizeY;
+                    child.measuredSize.y = space;
+                    usedSpace += space;
+                    freeSpace -= space;
+                    fluidCount--;
+                    fluidSpace = freeSpace / fluidCount;
+                }
+                for (var i = 0; i < fluidItems.length; i++) {
+                    var child = fluidItems[i];
+                    var maxSizeY = child.maxSize.y;
+                    var minSizeY = child.minSize.y;
+                    if (maxSizeY !== "none") continue;
+                    var space = fluidSpace;
+                    if (maxSizeY !== "none" && space > maxSizeY) space = maxSizeY;
+                    if (minSizeY !== "none" && space < minSizeY) space = minSizeY;
+                    child.measuredSize.y = space;
+                    usedSpace += space;
+                    freeSpace -= space;
+                    fluidCount--;
+                    fluidSpace = freeSpace / fluidCount;
+                }
+                var offset = 0;
+                switch (this.alignment.x) {
+                  case "start":
+                    offset = 0;
+                    break;
+                  case "end":
+                    offset = contentSizeX - usedSpace;
+                    break;
+                  case "center":
+                    offset = contentSizeY / 2 - usedSpace / 2;
+                    break;
+                }
+                for (var i = 0; i < children.length; i++) {
+                    var child = children[i];
+                    var positionT = child.position.top;
+                    var positionL = child.position.left;
+                    var positionR = child.position.right;
+                    var positionB = child.position.bottom;
+                    if (positionT !== "auto" || positionB !== "auto" && positionL !== "auto" || positionR !== "auto") {
+                        continue;
+                    }
+                    var measuredSizeX = child.measuredSize.x;
+                    var measuredSizeY = child.measuredSize.y;
+                    var measuredOffsetX = 0;
+                    var measuredOffsetY = 0;
+                    measuredOffsetY = offset;
+                    switch (this.alignment.x) {
+                      case "start":
+                        measuredOffsetX = 0;
+                        break;
+                      case "end":
+                        measuredOffsetX = contentSizeY - measuredSizeY;
+                        break;
+                      case "center":
+                        measuredOffsetX = contentSizeY / 2 - measuredSizeY / 2;
+                        break;
+                    }
+                    child.measuredOffset.x = measuredOffsetX;
+                    child.measuredOffset.y = measuredOffsetY;
+                    offset = measuredOffsetY + measuredSizeY;
+                }
+            },
             layout: function(from, children) {
+                this.__simple__layout__(from, children);
+                return;
                 var border = from.borderWidth;
                 var frameSizeX = this.size.x - border * 2;
                 var frameSizeY = this.size.y - border * 2;
@@ -4226,8 +4365,6 @@
                 var paddingL = view.padding.left;
                 var paddingB = view.padding.bottom;
                 var paddingR = view.padding.right;
-                console.log(view.name);
-                if (view.name === "window") console.log(paddingT, paddingL, paddingB, paddingR);
                 var contentSizeX = this.size.x - paddingL - paddingR - border * 2;
                 var contentSizeY = this.size.y - paddingT - paddingB - border * 2;
                 var usedSpace = 0;
