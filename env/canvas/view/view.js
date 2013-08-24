@@ -287,8 +287,6 @@ var scheduleRenderProperties = [
 	'measuredOffset',
 	'measuredOffset.x',
 	'measuredOffset.y',
-	'contentOffset.x',
-	'contentOffset.y',
 	'transform.values',
 	'transform.origin.x',
 	'transform.origin.y',
@@ -299,7 +297,6 @@ var scheduleRenderProperties = [
 	'transform.scale.y',
 	'transform.shear.x',
 	'transform.shear.y',
-
 	'overflow',
 	'opacity'
 ]
@@ -395,8 +392,8 @@ var composite = function(view, screen) {
 
 	var parent = view.parent
 	if (parent) {
-		contentOffsetX = parent.contentOffset.x
-		contentOffsetY = parent.contentOffset.y
+		contentOffsetX = parent.content.offset.x
+		contentOffsetY = parent.content.offset.y
 	}
 
 	var viewSizeX = view.animatedPropertyValue('measuredSize.x')

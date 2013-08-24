@@ -15,8 +15,8 @@ var ScrollView = boxspring.override('boxspring.view.ScrollView', {
 
 		var self = this
 		this.scroller = new Scroller(function(x, y, zoom) {
-			self.contentOffset.x = -x
-			self.contentOffset.y = -y
+			self.content.offset.x = -x
+			self.content.offset.y = -y
 		})
 
 		return this
@@ -51,8 +51,8 @@ var ScrollView = boxspring.override('boxspring.view.ScrollView', {
 			)
 		}
 
-		if (property === 'contentOffset.x' ||
-			property === 'contentOffset.y') {
+		if (property === 'content.offset.x' ||
+			property === 'content.offset.y') {
 			this.scheduleRender()
 		}
 	},

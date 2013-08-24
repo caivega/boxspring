@@ -47,7 +47,7 @@
 		}
 
 		var root = boxspring.view.Window.instance()
-		root.name = 'Window'
+		root.name = 'window'
 		root.backgroundColor = 'rgba(200, 200, 200, 0.5)'
 		root.size.x = 'auto'
 		root.size.y = 'auto'
@@ -63,8 +63,8 @@
 		view.position.y = 100
 		view.size.x = 100
 		view.size.y = 100
-		view.contentLayout.horizontalAlignment = 'center'
-		view.contentLayout.verticalAlignment = 'center'
+		view.content.horizontalAlignment = 'center'
+		view.content.verticalAlignment = 'center'
 		root.addChild(view)
 
 		var axis = createView()
@@ -88,11 +88,12 @@
 		//----------------------------------------------------------------------
 		// Animations
 		//----------------------------------------------------------------------
-		/*
+
 		for (var i = 0; i < 5; i++) {
 			var view = createView()
 			view.size.x = 'fill'
 			view.size.y = 'fill'
+			view.padding = 10
 			root.addChild(view)
 		}
 
@@ -105,17 +106,17 @@
 
 			View.setupAnimation(1200)
 			view.size.y = 'fill'
-			//root.contentLayout.orientation = root.contentLayout.orientation === 'horizontal' ? 'vertical' : 'horizontal'
+			//root.content.orientation = root.content.orientation === 'horizontal' ? 'vertical' : 'horizontal'
 			View.startAnimation()
 		})
-		*/
+
 		//----------------------------------------------------------------------
 		// Scroll Demo
 		//----------------------------------------------------------------------
-
+		/*
 		var scrollview = new boxspring.view.ScrollView()
 		scrollview.backgroundColor = 'rgba(255, 0, 0, 0.5)'
-		scrollview.name = 'Scroll View'
+		scrollview.name = 'scrollview'
 		root.addChild(scrollview)
 
 		scrollview.contentSize.x = 'fill'
@@ -126,9 +127,10 @@
 			view.name = 'View' + i
 			view.size.x = 'fill'
 			view.size.y = 100
-			view.padding = 20
+			view.padding = 10
 			scrollview.addChild(view)
 		}
+		*/
 
 	</script>
 

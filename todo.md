@@ -1,13 +1,22 @@
 TODO
 ================================================================================
 
+measuredOffset -> measuredOrigin ! bin non ça existe pu "origin"
+absoluteOffset -> absoluteOrigin
+
+animate should take:
+ - object
+  {property: [from, to], property: to}
+ - function
+ - key value
+
 unit system
  "50%"
  "50% of offset.x"
 
 Think about the "content" property
 
-class ContentLayout ?
+class content ?
       Content ?
 
     offset.x
