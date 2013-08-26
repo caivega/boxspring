@@ -553,12 +553,10 @@ document.addEventListener("DOMContentLoaded", function(event) {
 	document.body.appendChild(screenCanvas)
 
 	screenContext = screenCanvas.getContext('2d')
+	screenContext.translate(0.5, -0.5)
 
 	window.addEventListener('resize', function() {
 		screenCanvas.width = window.innerWidth
 		screenCanvas.height = window.innerHeight
 	})
 })
-
-
-
