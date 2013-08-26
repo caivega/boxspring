@@ -1,0 +1,118 @@
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, target-densitydpi=medium-dpi" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+	<meta name="format-detection" content="telephone=no" />
+</head>
+<body>
+	<style>
+		html,
+		body {
+			height: 100%;
+			width: 100%;
+			margin: 0px;
+			padding: 0px;
+		}
+	</style>
+	<script type="text/javascript" src="../../boxspring.js"></script>
+	<script type="text/javascript">
+
+		var index = -1
+		var tests = []
+
+		document.addEventListener('touchstart', function(e) {
+
+			index = index + 1
+			if (index > tests.length - 1) {
+				index = 0
+			}
+
+			tests[index].call(null)
+
+			e.preventDefault()
+		})
+
+		var View   = boxspring.view.View
+		var Window = boxspring.view.Window
+
+		var win = boxspring.view.Window.instance()
+		win.backgroundColor = 'rgba(100, 100, 100, 0.25)'
+		win.name = 'window'
+		win.size.x = 'auto'
+		win.size.y = 'auto'
+
+		var root = new View()
+		root.backgroundColor = 'rgba(255, 0, 0, 0.25)'
+		root.position.x = 100
+		root.position.y = 100
+		root.size.x = 400
+		root.size.y = 400
+
+		win.addChild(root)
+
+		var view = new View()
+		view.backgroundColor = 'rgba(255, 255, 0, 0.25)'
+		view.size.x = 100
+		view.size.y = 100
+		view.position.x = 0
+		view.position.y = 0
+
+		root.addChild(view)
+
+		tests.push(function() {
+			view.position.right = 0
+		})
+
+		tests.push(function() {
+			view.position.left = 'auto'
+		})
+
+		tests.push(function() {
+			view.position.bottom = 0
+		})
+
+		tests.push(function() {
+			view.position.top = 'auto'
+		})
+
+		tests.push(function() {
+			view.position.left = 0
+		})
+
+		tests.push(function() {
+			view.position.right = 'auto'
+		})
+
+		tests.push(function() {
+			view.position.top = 0
+		})
+
+		tests.push(function() {
+			view.position.bottom = 'auto'
+		})
+
+		tests.push(function() {
+			view.position.top = 0
+			view.position.left = 0
+			view.position.bottom = 0
+			view.position.right = 0
+		})
+
+		tests.push(function() {
+			view.margin = -10
+		})
+
+		tests.push(function() {
+			view.margin = 0
+			view.position.top = 0
+			view.position.left = 0
+			view.position.right = 'auto'
+			view.position.bottom = 'auto'
+		})
+
+	</script>
+
+</body>
+</html>

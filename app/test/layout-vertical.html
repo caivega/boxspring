@@ -1,0 +1,76 @@
+<html>
+<head>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, target-densitydpi=medium-dpi" />
+	<meta name="apple-mobile-web-app-capable" content="yes" />
+	<meta name="apple-mobile-web-app-status-bar-style" content="black" />
+	<meta name="format-detection" content="telephone=no" />
+</head>
+<body>
+	<style>
+		html,
+		body {
+			height: 100%;
+			width: 100%;
+			margin: 0px;
+			padding: 0px;
+		}
+	</style>
+	<script type="text/javascript" src="../../boxspring.js"></script>
+	<script type="text/javascript">
+
+		var index = -1
+		var tests = []
+
+		document.addEventListener('touchstart', function(e) {
+
+			index = index + 1
+			if (index > tests.length - 1) {
+				index = 0
+			}
+
+			tests[index].call(null)
+
+			e.preventDefault()
+		})
+
+		var View   = boxspring.view.View
+		var Window = boxspring.view.Window
+
+		var createView = function() {
+			var r = Math.round(Math.random() * 255)
+			var g = Math.round(Math.random() * 255)
+			var b = Math.round(Math.random() * 255)
+			var view = new View()
+			view.backgroundColor = 'rgba(' + r + ' ,' + g + ',' + b + ', 0.5)';
+			return view
+		}
+
+		var win = boxspring.view.Window.instance()
+		win.backgroundColor = 'rgba(100, 100, 100, 0.25)'
+		win.name = 'window'
+		win.size.x = 'auto'
+		win.size.y = 'auto'
+		win.content.orientation = 'vertical'
+
+		var view1 = createView()
+		var view2 = createView()
+		var view3 = createView()
+		var view4 = createView()
+		var view5 = createView()
+
+		win.addChild(view1)
+		win.addChild(view2)
+		win.addChild(view3)
+		win.addChild(view4)
+		win.addChild(view5)
+
+		tests.push(function() {
+
+		})
+
+
+	</script>
+
+</body>
+</html>

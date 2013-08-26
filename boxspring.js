@@ -4005,6 +4005,9 @@
         "use strict";
         var ContentLayout = boxspring.define("boxspring.layout.ContentLayout", {
             properties: {
+                target: {
+                    value: null
+                },
                 size: {
                     value: function() {
                         return new boxspring.geom.Size;
@@ -4024,234 +4027,45 @@
                     }
                 }
             },
-            __simple__layout__: function(view, children) {
-                var contentSizeX = this.size.x;
-                var contentSizeY = this.size.y;
-                var usedSpace = 0;
-                var freeSpace = contentSizeX;
-                var fluidItems = [];
-                var fluidSpace = 0;
-                var fluidCount = 0;
-                for (var i = 0; i < children.length; i++) {
-                    var child = children[i];
-                    var positionT = child.position.top;
-                    var positionL = child.position.left;
-                    var positionR = child.position.right;
-                    var positionB = child.position.bottom;
-                    var sizeX = child.size.x;
-                    var sizeY = child.size.y;
-                    var maxSizeX = child.maxSize.x;
-                    var maxSizeY = child.maxSize.y;
-                    var minSizeX = child.minSize.x;
-                    var minSizeY = child.minSize.y;
-                    var measuredSizeX = sizeX === "fill" ? contentSizeX : sizeX;
-                    var measuredSizeY = sizeY === "fill" ? contentSizeY : sizeY;
-                    var measuredOffsetX = 0;
-                    var measuredOffsetY = 0;
-                    if (positionT !== "auto" || positionB !== "auto" || positionL !== "auto" || positionR !== "auto") {
-                        if (positionL !== "auto" && positionR !== "auto") {
-                            measuredSizeX = contentSizeX - positionL - positionR;
-                        }
-                        if (positionT !== "auto" && positionB !== "auto") {
-                            measuredSizeY = contentSizeY - positionT - positionB;
-                        }
-                        if (maxSizeX !== "none" && measuredSizeX > maxSizeX) measuredSizeX = maxSizeX;
-                        if (minSizeX !== "none" && measuredSizeX < minSizeX) measuredSizeX = minSizeX;
-                        if (maxSizeY !== "none" && measuredSizeY > maxSizeY) measuredSizeY = maxSizeY;
-                        if (minSizeY !== "none" && measuredSizeY < minSizeY) measuredSizeY = minSizeY;
-                        if (positionL !== "auto") {
-                            measuredOffsetX = positionL;
-                        } else if (positionR !== "auto") {
-                            measuredOffsetX = frameSizeX - measuredSizeX;
-                        }
-                        if (positionT !== "auto") {
-                            measuredOffsetY = positionT;
-                        } else if (positionB !== "auto") {
-                            measuredOffsetY = frameSizeY - measuredSizeY;
-                        }
-                        view.measuredSize.x = measuredSizeX;
-                        view.measuredSize.y = measuredSizeY;
-                        view.measuredOffset.x = measuredOffsetX + frameOffsetX;
-                        view.measuredOffset.y = measuredOffsetY + frameOffsetY;
-                        continue;
-                    }
-                    if (maxSizeX !== "none" && measuredSizeX > maxSizeX) measuredSizeX = maxSizeX;
-                    if (minSizeX !== "none" && measuredSizeX < minSizeX) measuredSizeX = minSizeX;
-                    if (maxSizeY !== "none" && measuredSizeY > maxSizeY) measuredSizeY = maxSizeY;
-                    if (minSizeY !== "none" && measuredSizeY < minSizeY) measuredSizeY = minSizeY;
-                    if (sizeY === "fill") {
-                        fluidItems.push(child);
-                    } else {
-                        var space = measuredSizeY;
-                        freeSpace -= space;
-                        usedSpace += space;
-                    }
-                    child.measuredSize.x = measuredSizeX;
-                    child.measuredSize.y = measuredSizeY;
-                }
-                fluidCount = fluidItems.length;
-                fluidSpace = freeSpace / fluidCount;
-                for (var i = 0; i < fluidItems.length; i++) {
-                    var child = fluidItems[i];
-                    var maxSizeY = child.maxSize.y;
-                    var minSizeY = child.minSize.y;
-                    if (maxSizeY === "none") continue;
-                    var space = fluidSpace;
-                    if (maxSizeY !== "none" && space > maxSizeY) space = maxSizeY;
-                    if (minSizeY !== "none" && space < minSizeY) space = minSizeY;
-                    child.measuredSize.y = space;
-                    usedSpace += space;
-                    freeSpace -= space;
-                    fluidCount--;
-                    fluidSpace = freeSpace / fluidCount;
-                }
-                for (var i = 0; i < fluidItems.length; i++) {
-                    var child = fluidItems[i];
-                    var maxSizeY = child.maxSize.y;
-                    var minSizeY = child.minSize.y;
-                    if (maxSizeY !== "none") continue;
-                    var space = fluidSpace;
-                    if (maxSizeY !== "none" && space > maxSizeY) space = maxSizeY;
-                    if (minSizeY !== "none" && space < minSizeY) space = minSizeY;
-                    child.measuredSize.y = space;
-                    usedSpace += space;
-                    freeSpace -= space;
-                    fluidCount--;
-                    fluidSpace = freeSpace / fluidCount;
-                }
-                var offset = 0;
-                switch (this.alignment.x) {
-                  case "start":
-                    offset = 0;
-                    break;
-                  case "end":
-                    offset = contentSizeX - usedSpace;
-                    break;
-                  case "center":
-                    offset = contentSizeY / 2 - usedSpace / 2;
-                    break;
-                }
-                for (var i = 0; i < children.length; i++) {
-                    var child = children[i];
-                    var positionT = child.position.top;
-                    var positionL = child.position.left;
-                    var positionR = child.position.right;
-                    var positionB = child.position.bottom;
-                    if (positionT !== "auto" || positionB !== "auto" && positionL !== "auto" || positionR !== "auto") {
-                        continue;
-                    }
-                    var measuredSizeX = child.measuredSize.x;
-                    var measuredSizeY = child.measuredSize.y;
-                    var measuredOffsetX = 0;
-                    var measuredOffsetY = 0;
-                    measuredOffsetY = offset;
-                    switch (this.alignment.x) {
-                      case "start":
-                        measuredOffsetX = 0;
-                        break;
-                      case "end":
-                        measuredOffsetX = contentSizeY - measuredSizeY;
-                        break;
-                      case "center":
-                        measuredOffsetX = contentSizeY / 2 - measuredSizeY / 2;
-                        break;
-                    }
-                    child.measuredOffset.x = measuredOffsetX;
-                    child.measuredOffset.y = measuredOffsetY;
-                    offset = measuredOffsetY + measuredSizeY;
-                }
+            update: function() {
+                var children = this.target.children;
+                this.measure(children);
+                this.layout(children);
             },
-            layout: function(from, children) {
-                this.__simple__layout__(from, children);
-                return;
-                var border = from.borderWidth;
-                var frameSizeX = this.size.x - border * 2;
-                var frameSizeY = this.size.y - border * 2;
-                var frameOffsetX = this.offset.x;
-                var frameOffsetY = this.offset.y;
-                for (var i = 0; i < children.length; i++) {
-                    var view = children[i];
-                    var positionT = view.position.top;
-                    var positionL = view.position.left;
-                    var positionR = view.position.right;
-                    var positionB = view.position.bottom;
-                    if (positionT === "auto" && positionB === "auto" && positionL === "auto" && positionR === "auto") {
-                        continue;
-                    }
-                    var sizeX = view.size.x;
-                    var sizeY = view.size.y;
-                    var maxSizeX = view.maxSize.x;
-                    var maxSizeY = view.maxSize.y;
-                    var minSizeX = view.minSize.x;
-                    var minSizeY = view.minSize.y;
-                    var marginT = view.margin.top;
-                    var marginL = view.margin.left;
-                    var marginR = view.margin.right;
-                    var marginB = view.margin.bottom;
-                    var marginX = marginL + marginR;
-                    var marginY = marginT + marginB;
-                    var measuredSizeX = sizeX === "fill" ? frameSizeX : sizeX;
-                    var measuredSizeY = sizeY === "fill" ? frameSizeY : sizeY;
-                    var measuredOffsetX = 0;
-                    var measuredOffsetY = 0;
-                    if (positionL !== "auto" && positionR !== "auto") {
-                        measuredSizeX = frameSizeX - positionL - positionR - marginX;
-                    }
-                    if (positionT !== "auto" && positionB !== "auto") {
-                        measuredSizeY = frameSizeY - positionT - positionB - marginY;
-                    }
-                    if (maxSizeX !== "none" && measuredSizeX > maxSizeX) measuredSizeX = maxSizeX;
-                    if (minSizeX !== "none" && measuredSizeX < minSizeX) measuredSizeX = minSizeX;
-                    if (maxSizeY !== "none" && measuredSizeY > maxSizeY) measuredSizeY = maxSizeY;
-                    if (minSizeY !== "none" && measuredSizeY < minSizeY) measuredSizeY = minSizeY;
-                    if (positionL !== "auto") {
-                        measuredOffsetX = positionL + marginL + border;
-                    } else if (positionR !== "auto") {
-                        measuredOffsetX = frameSizeX - measuredSizeX - positionR + border;
-                    }
-                    if (positionT !== "auto") {
-                        measuredOffsetY = positionT + marginT + border;
-                    } else if (positionB !== "auto") {
-                        measuredOffsetY = frameSizeY - measuredSizeY - positionB + border;
-                    }
-                    view.measuredSize.x = measuredSizeX;
-                    view.measuredSize.y = measuredSizeY;
-                    view.measuredOffset.x = measuredOffsetX + frameOffsetX;
-                    view.measuredOffset.y = measuredOffsetY + frameOffsetY;
-                }
+            measure: function(children) {
+                var border = this.target.borderWidth;
+                var paddingT = this.target.padding.top;
+                var paddingL = this.target.padding.left;
+                var paddingB = this.target.padding.bottom;
+                var paddingR = this.target.padding.right;
+                var paddingBoxSizeX = this.size.x - border * 2;
+                var paddingBoxSizeY = this.size.y - border * 2;
+                var contentBoxSizeX = paddingBoxSizeX - paddingL - paddingR;
+                var contentBoxSizeY = paddingBoxSizeY - paddingT - paddingB;
+                var paddingBoxSize = 0;
+                var contentBoxSize = 0;
                 switch (this.orientation) {
                   case "vertical":
-                    this.__layoutVertically(from, children);
+                    paddingBoxSize = paddingBoxSizeY;
+                    contentBoxSize = contentBoxSizeY;
                     break;
                   case "horizontal":
-                    this.__layoutHorizontally(from, children);
+                    paddingBoxSize = paddingBoxSizeX;
+                    contentBoxSize = contentBoxSizeX;
                     break;
                 }
-            },
-            __layoutHorizontally: function(view, children) {
-                var contentAlignmentX = this.alignment.x;
-                var contentAlignmentY = this.alignment.y;
-                var border = view.borderWidth;
-                var paddingT = view.padding.top;
-                var paddingL = view.padding.left;
-                var paddingB = view.padding.bottom;
-                var paddingR = view.padding.right;
-                var contentSizeX = this.size.x - paddingL - paddingR - border * 2;
-                var contentSizeY = this.size.y - paddingT - paddingB - border * 2;
-                var usedSpace = 0;
-                var freeSpace = contentSizeX;
-                var fluidItems = [];
-                var fluidSpace = 0;
-                var fluidCount = 0;
+                var flexibles = [];
+                var confineds = [];
+                var space = contentBoxSize;
+                var total = 0;
                 for (var i = 0; i < children.length; i++) {
                     var child = children[i];
+                    var measuredSizeX = 0;
+                    var measuredSizeY = 0;
                     var positionT = child.position.top;
                     var positionL = child.position.left;
                     var positionR = child.position.right;
                     var positionB = child.position.bottom;
-                    if (positionT !== "auto" || positionB !== "auto" && positionL !== "auto" || positionR !== "auto") {
-                        continue;
-                    }
                     var sizeX = child.size.x;
                     var sizeY = child.size.y;
                     var maxSizeX = child.maxSize.x;
@@ -4262,229 +4076,146 @@
                     var marginL = child.margin.left;
                     var marginR = child.margin.right;
                     var marginB = child.margin.bottom;
-                    var marginX = marginL + marginR;
-                    var marginY = marginT + marginB;
-                    var measuredSizeX = sizeX === "fill" ? contentSizeX : sizeX;
-                    var measuredSizeY = sizeY === "fill" ? contentSizeY : sizeY;
+                    if (positionT !== "auto" || positionB !== "auto" || positionL !== "auto" || positionR !== "auto") {
+                        measuredSizeX = sizeX === "fill" ? paddingBoxSizeX : sizeX;
+                        measuredSizeY = sizeY === "fill" ? paddingBoxSizeY : sizeY;
+                        if (positionL !== "auto" && positionR !== "auto") measuredSizeX = paddingBoxSizeX - positionL - positionR - marginL - marginR;
+                        if (positionT !== "auto" && positionB !== "auto") measuredSizeY = paddingBoxSizeY - positionT - positionB - marginT - marginB;
+                        continue;
+                    }
+                    measuredSizeX = sizeX === "fill" ? contentBoxSizeX - marginL - marginR : sizeX;
+                    measuredSizeY = sizeY === "fill" ? contentBoxSizeY - marginT - marginB : sizeY;
                     if (maxSizeX !== "none" && measuredSizeX > maxSizeX) measuredSizeX = maxSizeX;
                     if (minSizeX !== "none" && measuredSizeX < minSizeX) measuredSizeX = minSizeX;
                     if (maxSizeY !== "none" && measuredSizeY > maxSizeY) measuredSizeY = maxSizeY;
                     if (minSizeY !== "none" && measuredSizeY < minSizeY) measuredSizeY = minSizeY;
-                    if (sizeX === "fill") {
-                        fluidItems.push(child);
-                    } else {
-                        var space = measuredSizeX - marginX;
-                        freeSpace -= space;
-                        usedSpace += space;
-                    }
-                    child.measuredSize.x = measuredSizeX;
-                    child.measuredSize.y = measuredSizeY;
-                }
-                fluidCount = fluidItems.length;
-                fluidSpace = freeSpace / fluidCount;
-                for (var i = 0; i < fluidItems.length; i++) {
-                    var child = fluidItems[i];
-                    var maxSizeX = child.maxSize.x;
-                    var minSizeX = child.minSize.x;
-                    if (maxSizeX === "none") continue;
-                    var space = fluidSpace;
-                    if (maxSizeX !== "none" && space > maxSizeX) space = maxSizeX;
-                    if (minSizeX !== "none" && space < minSizeX) space = minSizeX;
-                    child.measuredSize.x = space;
-                    usedSpace += space;
-                    freeSpace -= space;
-                    fluidCount--;
-                    fluidSpace = freeSpace / fluidCount;
-                }
-                for (var i = 0; i < fluidItems.length; i++) {
-                    var child = fluidItems[i];
-                    var maxSizeX = child.maxSize.x;
-                    var minSizeX = child.minSize.x;
-                    if (maxSizeX !== "none") continue;
-                    var space = fluidSpace;
-                    if (maxSizeX !== "none" && space > maxSizeX) space = maxSizeX;
-                    if (minSizeX !== "none" && space < minSizeX) space = minSizeX;
-                    child.measuredSize.x = space;
-                    usedSpace += space;
-                    freeSpace -= space;
-                    fluidCount--;
-                    fluidSpace = freeSpace / fluidCount;
-                }
-                var offset = 0;
-                switch (contentAlignmentX) {
-                  case "start":
-                    offset = paddingL + border;
-                    break;
-                  case "end":
-                    offset = paddingL + border + contentSizeX - usedSpace;
-                    break;
-                  case "center":
-                    offset = contentSizeX / 2 - usedSpace / 2;
-                    break;
-                }
-                for (var i = 0; i < children.length; i++) {
-                    var child = children[i];
-                    var positionT = child.position.top;
-                    var positionL = child.position.left;
-                    var positionR = child.position.right;
-                    var positionB = child.position.bottom;
-                    if (positionT !== "auto" || positionB !== "auto" && positionL !== "auto" || positionR !== "auto") {
-                        continue;
-                    }
-                    var marginT = child.margin.top;
-                    var marginL = child.margin.left;
-                    var marginR = child.margin.right;
-                    var marginB = child.margin.bottom;
-                    var measuredSizeX = child.measuredSize.x;
-                    var measuredSizeY = child.measuredSize.y;
-                    var measuredOffsetX = 0;
-                    var measuredOffsetY = 0;
-                    measuredOffsetX = offset + marginL;
-                    switch (contentAlignmentY) {
-                      case "start":
-                        measuredOffsetY = paddingT + border;
-                        break;
-                      case "end":
-                        measuredOffsetY = paddingT + border + contentSizeY - measuredSizeY;
-                        break;
-                      case "center":
-                        measuredOffsetY = paddingT + border + contentSizeY / 2 - measuredSizeY / 2;
-                        break;
-                    }
-                    child.measuredOffset.x = measuredOffsetX;
-                    child.measuredOffset.y = measuredOffsetY;
-                    offset = measuredOffsetX + measuredSizeX;
-                }
-                return this;
-            },
-            __layoutVertically: function(view, children) {
-                var contentAlignmentX = this.alignment.x;
-                var contentAlignmentY = this.alignment.y;
-                var border = view.borderWidth;
-                var paddingT = view.padding.top;
-                var paddingL = view.padding.left;
-                var paddingB = view.padding.bottom;
-                var paddingR = view.padding.right;
-                var contentSizeX = this.size.x - paddingL - paddingR - border * 2;
-                var contentSizeY = this.size.y - paddingT - paddingB - border * 2;
-                var usedSpace = 0;
-                var freeSpace = contentSizeY;
-                var fluidItems = [];
-                var fluidSpace = 0;
-                var fluidCount = 0;
-                for (var i = 0; i < children.length; i++) {
-                    var child = children[i];
-                    var positionT = child.position.top;
-                    var positionL = child.position.left;
-                    var positionR = child.position.right;
-                    var positionB = child.position.bottom;
-                    if (positionT !== "auto" || positionB !== "auto" && positionL !== "auto" || positionR !== "auto") {
-                        continue;
-                    }
-                    var sizeX = child.size.x;
-                    var sizeY = child.size.y;
-                    var maxSizeX = child.maxSize.x;
-                    var maxSizeY = child.maxSize.y;
-                    var minSizeX = child.minSize.x;
-                    var minSizeY = child.minSize.y;
-                    var marginT = child.margin.top;
-                    var marginL = child.margin.left;
-                    var marginR = child.margin.right;
-                    var marginB = child.margin.bottom;
-                    var marginX = marginL + marginR;
-                    var marginY = marginT + marginB;
-                    var measuredSizeX = sizeX === "fill" ? contentSizeX : sizeX;
-                    var measuredSizeY = sizeY === "fill" ? contentSizeY : sizeY;
-                    if (maxSizeX !== "none" && measuredSizeX > maxSizeX) measuredSizeX = maxSizeX;
-                    if (minSizeX !== "none" && measuredSizeX < minSizeX) measuredSizeX = minSizeX;
-                    if (maxSizeY !== "none" && measuredSizeY > maxSizeY) measuredSizeY = maxSizeY;
-                    if (minSizeY !== "none" && measuredSizeY < minSizeY) measuredSizeY = minSizeY;
+                    total += child.weight;
                     if (sizeY === "fill") {
-                        fluidItems.push(child);
+                        if (maxSizeY !== "none" || minSizeY !== "none") {
+                            confineds.push(child);
+                        } else {
+                            flexibles.push(child);
+                        }
                     } else {
-                        var space = measuredSizeY - marginY;
-                        freeSpace -= space;
-                        usedSpace += space;
+                        switch (this.orientation) {
+                          case "vertical":
+                            space -= measuredSizeY - marginT - marginB;
+                            break;
+                          case "horizontal":
+                            space -= measuredSizeX - marginL - marginB;
+                            break;
+                        }
                     }
                     child.measuredSize.x = measuredSizeX;
                     child.measuredSize.y = measuredSizeY;
                 }
-                fluidCount = fluidItems.length;
-                fluidSpace = freeSpace / fluidCount;
-                for (var i = 0; i < fluidItems.length; i++) {
-                    var child = fluidItems[i];
+                for (var i = 0; i < confineds.length; i++) {
+                    var child = confineds[i];
+                    var maxSizeX = child.maxSize.x;
                     var maxSizeY = child.maxSize.y;
+                    var minSizeX = child.minSize.x;
                     var minSizeY = child.minSize.y;
-                    if (maxSizeY === "none") continue;
-                    var space = fluidSpace;
-                    if (maxSizeY !== "none" && space > maxSizeY) space = maxSizeY;
-                    if (minSizeY !== "none" && space < minSizeY) space = minSizeY;
-                    child.measuredSize.y = space;
-                    usedSpace += space;
-                    freeSpace -= space;
-                    fluidCount--;
-                    fluidSpace = freeSpace / fluidCount;
+                    var maxSize = 0;
+                    var minSize = 0;
+                    switch (this.orientation) {
+                      case "vertical":
+                        maxSize = maxSizeY;
+                        minSize = minSizeY;
+                        break;
+                      case "horizontal":
+                        maxSize = maxSizeX;
+                        minSize = minSizeX;
+                    }
+                    var measuredSize = child.weight / total * space;
+                    if (measuredSize > maxSize) measuredSize = maxSizeY;
+                    if (measuredSize < minSize) measuredSize = minSizeY;
+                    total -= child.weight;
+                    space -= measuredSize;
+                    switch (this.orientation) {
+                      case "vertical":
+                        child.measuredSize.y = measuredSize;
+                        break;
+                      case "horizontal":
+                        child.measuredSize.x = measuredSize;
+                        break;
+                    }
                 }
-                for (var i = 0; i < fluidItems.length; i++) {
-                    var child = fluidItems[i];
-                    var maxSizeY = child.maxSize.y;
-                    var minSizeY = child.minSize.y;
-                    if (maxSizeY !== "none") continue;
-                    var space = fluidSpace;
-                    if (maxSizeY !== "none" && space > maxSizeY) space = maxSizeY;
-                    if (minSizeY !== "none" && space < minSizeY) space = minSizeY;
-                    child.measuredSize.y = space;
-                    usedSpace += space;
-                    freeSpace -= space;
-                    fluidCount--;
-                    fluidSpace = freeSpace / fluidCount;
+                for (var i = 0; i < flexibles.length; i++) {
+                    var child = flexibles[i];
+                    switch (this.orientation) {
+                      case "vertical":
+                        child.measuredSize.y = child.weight / total * space;
+                        break;
+                      case "horizontal":
+                        child.measuredSize.x = child.weight / total * space;
+                        break;
+                    }
                 }
+            },
+            layout: function(children) {
+                var border = this.target.borderWidth;
+                var paddingT = this.target.padding.top;
+                var paddingL = this.target.padding.left;
+                var paddingB = this.target.padding.bottom;
+                var paddingR = this.target.padding.right;
+                var paddingBoxSizeX = this.size.x - border * 2;
+                var paddingBoxSizeY = this.size.y - border * 2;
+                var contentBoxSizeX = paddingBoxSizeX - paddingL - paddingR;
+                var contentBoxSizeY = paddingBoxSizeY - paddingT - paddingB;
                 var offset = 0;
-                switch (contentAlignmentY) {
-                  case "start":
-                    offset = paddingT + border;
-                    break;
-                  case "end":
-                    offset = paddingT + border + contentSizeX - usedSpace;
-                    break;
-                  case "center":
-                    offset = contentSizeY / 2 - usedSpace / 2;
-                    break;
-                }
+                var alignmentX = this.alignment.x;
+                var alignmentY = this.alignment.y;
                 for (var i = 0; i < children.length; i++) {
                     var child = children[i];
                     var positionT = child.position.top;
                     var positionL = child.position.left;
                     var positionR = child.position.right;
                     var positionB = child.position.bottom;
-                    if (positionT !== "auto" || positionB !== "auto" && positionL !== "auto" || positionR !== "auto") {
-                        continue;
-                    }
                     var marginT = child.margin.top;
                     var marginL = child.margin.left;
                     var marginR = child.margin.right;
                     var marginB = child.margin.bottom;
-                    var measuredSizeX = child.measuredSize.x;
-                    var measuredSizeY = child.measuredSize.y;
+                    if (positionT !== "auto" || positionB !== "auto" && positionL !== "auto" || positionR !== "auto") {
+                        child.measuredOffset.x = positionL + marginL;
+                        child.measuredOffset.y = positionT + marginT;
+                        continue;
+                    }
                     var measuredOffsetX = 0;
                     var measuredOffsetY = 0;
-                    measuredOffsetY = offset + marginT;
-                    switch (contentAlignmentX) {
-                      case "start":
-                        measuredOffsetX = paddingT + border;
-                        break;
-                      case "end":
-                        measuredOffsetX = paddingT + border + contentSizeY - measuredSizeY;
-                        break;
-                      case "center":
-                        measuredOffsetX = paddingT + border + contentSizeY / 2 - measuredSizeY / 2;
-                        break;
+                    if (this.orientation === "vertical") {
+                        switch (alignmentX) {
+                          case "start":
+                            measuredOffsetX = border + paddingL + marginL;
+                            break;
+                          case "end":
+                            measuredOffsetX = border + paddingL + contentBoxSizeX - measuredSizeX;
+                            break;
+                          case "center":
+                            measuredOffsetX = border + paddingL + contentBoxSizeX / 2 - measuredSizeX / 2;
+                            break;
+                        }
+                        measuredOffsetY = offset;
+                        offset += child.measuredSize.y;
+                    }
+                    if (this.orientation === "horizontal") {
+                        switch (alignmentY) {
+                          case "start":
+                            measuredOffsetY = border + paddingT + marginT;
+                            break;
+                          case "end":
+                            measuredOffsetY = border + paddingT + contentBoxSizeY - measuredSizeY;
+                            break;
+                          case "center":
+                            measuredOffsetY = border + paddingT + contentBoxSizeY / 2 - measuredSizeY / 2;
+                            break;
+                        }
+                        measuredOffsetX = offset;
+                        offset += child.measuredSize.x;
                     }
                     child.measuredOffset.x = measuredOffsetX;
                     child.measuredOffset.y = measuredOffsetY;
-                    offset = measuredOffsetY + measuredSizeY;
+                    console.log("W", child.measuredSize.x, "H", child.measuredSize.y, "X", child.measuredOffset.x, "Y", child.measuredOffset.y);
                 }
-                return this;
             }
         });
     },
@@ -4635,6 +4366,9 @@
                     value: function() {
                         return new boxspring.geom.Position("auto");
                     }
+                },
+                weight: {
+                    value: 1
                 },
                 size: {
                     value: function() {
@@ -4974,9 +4708,10 @@
             },
             layout: function() {
                 if (this.content) {
+                    this.content.target = this;
                     this.content.size.x = this.measuredSize.x;
                     this.content.size.y = this.measuredSize.y;
-                    this.content.layout(this, this.children);
+                    this.content.update();
                 }
                 return this;
             },
@@ -5105,7 +4840,7 @@
             }
             return root;
         };
-        var scheduleReflowProperties = [ "size.x", "size.y", "minSize.x", "minSize.y", "maxSize.x", "maxSize.y", "visible", "margin.top", "margin.left", "margin.right", "margin.bottom" ];
+        var scheduleReflowProperties = [ "size.x", "size.y", "minSize.x", "minSize.y", "maxSize.x", "maxSize.y", "visible", "margin.top", "margin.left", "margin.right", "margin.bottom", "position.x", "position.y", "position.top", "position.bottom", "position.right", "position.left" ];
         var scheduleLayoutProperties = [ "content", "content.orientation", "content.size.x", "content.size.y", "content.offset.x", "content.offset.y", "content.alignment.x", "content.alignment.y", "measuredSize.x", "measuredSize.y", "borderWidth", "padding.top", "padding.left", "padding.right", "padding.bottom" ];
         var animatableProperties = [ "backgroundColor", "borderColor", "shadowColor", "backgroundImage", "backgroundSize.x", "backgroundSize.y", "borderWidth", "borderRadius", "shadowBlur", "shadowOffset.x", "shadowOffset.y", "opacity", "measuredSize.x", "measuredSize.y", "measuredOffset.x", "measuredOffset.y", "content.offset.x", "content.offset.y", "transform.origin.x", "transform.origin.y", "transform.translation.x", "transform.translation.y", "transform.rotation", "transform.scale.x", "transform.scale.y", "transform.shear.x", "transform.shear.y" ];
         var animationsReading = [];
@@ -5256,8 +4991,6 @@
         var updateDisplay = function() {
             updateDisplayScheduled = false;
             if (updateDisplayRoot == null) return;
-            if (root.size.x === "auto") updateDisplayRoot.measuredSize.x = window.innerWidth;
-            if (root.size.y === "auto") updateDisplayRoot.measuredSize.y = window.innerHeight;
             screenContext.clearRect(0, 0, screenCanvas.width, screenCanvas.height);
             composite(updateDisplayRoot, screenContext, 0, 0);
             showFPS();
@@ -5369,38 +5102,12 @@
             screenCanvas.height = window.innerHeight;
             document.body.appendChild(screenCanvas);
             screenContext = screenCanvas.getContext("2d");
+            screenContext.translate(.5, -.5);
             window.addEventListener("resize", function() {
                 screenCanvas.width = window.innerWidth;
                 screenCanvas.height = window.innerHeight;
             });
         });
-        var length = function(a) {
-            return Math.sqrt(a[0] * a[0] + a[1] * a[1]);
-        };
-        var normalize = function(a) {
-            var l = length(a);
-            return l ? [ a[0] / l, a[1] / l ] : [ 0, 0 ];
-        };
-        var dot = function(a, b) {
-            return a[0] * b[0] + a[1] * b[1];
-        };
-        var atan2 = Math.atan2;
-        var combine = function(a, b, ascl, bscl) {
-            return [ ascl * a[0] + bscl * b[0], ascl * a[1] + bscl * b[1] ];
-        };
-        var unmatrix = function(a, b, c, d, tx, ty) {
-            if (a * d - b * c === 0) return false;
-            var translate = [ tx, ty ];
-            var m = [ [ a, b ], [ c, d ] ];
-            var scale = [ length(m[0]) ];
-            m[0] = normalize(m[0]);
-            var skew = dot(m[0], m[1]);
-            m[1] = combine(m[1], m[0], 1, -skew);
-            scale[1] = length(m[1]);
-            skew /= scale[1];
-            var rotate = atan2(m[0][1], m[0][0]);
-            return [ translate, rotate, scale, skew ];
-        };
     },
     "1m": function(require, module, exports, global) {
         "use strict";
@@ -6238,6 +5945,11 @@
                 Window.parent.constructor.call(this);
                 window.addEventListener("resize", this.bind("__onWindowResize"));
                 return this;
+            },
+            layout: function() {
+                this.measuredSize.x = window.innerWidth;
+                this.measuredSize.y = window.innerHeight;
+                Window.parent.layout.call(this);
             },
             __onWindowResize: function() {
                 this.scheduleLayout();

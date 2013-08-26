@@ -21,6 +21,12 @@ var Window = boxspring.override('boxspring.view.Window', {
 		return this
 	},
 
+	layout: function() {
+		this.measuredSize.x = window.innerWidth
+		this.measuredSize.y = window.innerHeight
+		Window.parent.layout.call(this)
+	},
+
 	//--------------------------------------------------------------------------
 	// Private API
 	//--------------------------------------------------------------------------

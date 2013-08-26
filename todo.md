@@ -1,6 +1,9 @@
 TODO
 ================================================================================
 
+backgroundColor -> background.color
+border => meme chose
+
 measuredOffset -> measuredOrigin ! bin non ça existe pu "origin"
 absoluteOffset -> absoluteOrigin
 
