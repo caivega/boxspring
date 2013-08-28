@@ -4008,14 +4008,14 @@
                 target: {
                     value: null
                 },
-                size: {
-                    value: function() {
-                        return new boxspring.geom.Size;
-                    }
-                },
                 offset: {
                     value: function() {
                         return new boxspring.geom.Point;
+                    }
+                },
+                size: {
+                    value: function() {
+                        return new boxspring.geom.Size;
                     }
                 },
                 orientation: {
@@ -4029,10 +4029,6 @@
             },
             update: function() {
                 var children = this.target.children;
-                this.measure(children);
-                this.layout(children);
-            },
-            measure: function(children) {
                 var border = this.target.borderWidth;
                 var paddingT = this.target.padding.top;
                 var paddingL = this.target.padding.left;
@@ -4089,25 +4085,36 @@
                     if (minSizeX !== "none" && measuredSizeX < minSizeX) measuredSizeX = minSizeX;
                     if (maxSizeY !== "none" && measuredSizeY > maxSizeY) measuredSizeY = maxSizeY;
                     if (minSizeY !== "none" && measuredSizeY < minSizeY) measuredSizeY = minSizeY;
+                    child.measuredSize.x = measuredSizeX;
+                    child.measuredSize.y = measuredSizeY;
                     total += child.weight;
-                    if (sizeY === "fill") {
-                        if (maxSizeY !== "none" || minSizeY !== "none") {
+                    var used = 0;
+                    var size = 0;
+                    var maxSize = 0;
+                    var minSize = 0;
+                    switch (this.orientation) {
+                      case "vertical":
+                        size = sizeY;
+                        used = measuredSizeY - marginT - marginB;
+                        maxSize = maxSizeY;
+                        minSize = minSizeY;
+                        break;
+                      case "horizontal":
+                        size = sizeX;
+                        used = measuredSizeX - marginL - marginR;
+                        maxSize = maxSizeX;
+                        minSize = minSizeX;
+                        break;
+                    }
+                    if (size === "fill") {
+                        if (maxSize !== "none" || minSize !== "none") {
                             confineds.push(child);
                         } else {
                             flexibles.push(child);
                         }
                     } else {
-                        switch (this.orientation) {
-                          case "vertical":
-                            space -= measuredSizeY - marginT - marginB;
-                            break;
-                          case "horizontal":
-                            space -= measuredSizeX - marginL - marginB;
-                            break;
-                        }
+                        space -= used;
                     }
-                    child.measuredSize.x = measuredSizeX;
-                    child.measuredSize.y = measuredSizeY;
                 }
                 for (var i = 0; i < confineds.length; i++) {
                     var child = confineds[i];
@@ -4142,27 +4149,21 @@
                 }
                 for (var i = 0; i < flexibles.length; i++) {
                     var child = flexibles[i];
+                    var marginT = child.margin.top;
+                    var marginL = child.margin.left;
+                    var marginR = child.margin.right;
+                    var marginB = child.margin.bottom;
+                    var used = child.weight / total * space;
                     switch (this.orientation) {
                       case "vertical":
-                        child.measuredSize.y = child.weight / total * space;
+                        child.measuredSize.y = used - marginT - marginB;
                         break;
                       case "horizontal":
-                        child.measuredSize.x = child.weight / total * space;
+                        child.measuredSize.x = used - marginR - marginL;
                         break;
                     }
                 }
-            },
-            layout: function(children) {
-                var border = this.target.borderWidth;
-                var paddingT = this.target.padding.top;
-                var paddingL = this.target.padding.left;
-                var paddingB = this.target.padding.bottom;
-                var paddingR = this.target.padding.right;
-                var paddingBoxSizeX = this.size.x - border * 2;
-                var paddingBoxSizeY = this.size.y - border * 2;
-                var contentBoxSizeX = paddingBoxSizeX - paddingL - paddingR;
-                var contentBoxSizeY = paddingBoxSizeY - paddingT - paddingB;
-                var offset = 0;
+                var offset = border + paddingT;
                 var alignmentX = this.alignment.x;
                 var alignmentY = this.alignment.y;
                 for (var i = 0; i < children.length; i++) {
@@ -4180,41 +4181,38 @@
                         child.measuredOffset.y = positionT + marginT;
                         continue;
                     }
-                    var measuredOffsetX = 0;
-                    var measuredOffsetY = 0;
-                    if (this.orientation === "vertical") {
+                    switch (this.orientation) {
+                      case "vertical":
+                        child.measuredOffset.y = offset + marginT;
                         switch (alignmentX) {
                           case "start":
-                            measuredOffsetX = border + paddingL + marginL;
-                            break;
-                          case "end":
-                            measuredOffsetX = border + paddingL + contentBoxSizeX - measuredSizeX;
+                            child.measuredOffset.x = border + paddingL + marginL;
                             break;
                           case "center":
-                            measuredOffsetX = border + paddingL + contentBoxSizeX / 2 - measuredSizeX / 2;
+                            child.measuredOffset.x = border + paddingL + contentBoxSizeX - measuredSizeX;
+                            break;
+                          case "end":
+                            child.measuredOffset.x = border + paddingL + contentBoxSizeX / 2 - measuredSizeX / 2;
                             break;
                         }
-                        measuredOffsetY = offset;
-                        offset += child.measuredSize.y;
-                    }
-                    if (this.orientation === "horizontal") {
+                        offset += child.measuredSize.y + marginT + marginB;
+                        break;
+                      case "horizontal":
+                        child.measuredOffset.x = offset + marginL;
                         switch (alignmentY) {
                           case "start":
-                            measuredOffsetY = border + paddingT + marginT;
+                            child.measuredOffset.y = border + paddingT + marginT;
                             break;
                           case "end":
-                            measuredOffsetY = border + paddingT + contentBoxSizeY - measuredSizeY;
+                            child.measuredOffset.y = border + paddingT + contentBoxSizeY - measuredSizeY;
                             break;
                           case "center":
-                            measuredOffsetY = border + paddingT + contentBoxSizeY / 2 - measuredSizeY / 2;
+                            child.measuredOffset.y = border + paddingT + contentBoxSizeY / 2 - measuredSizeY / 2;
                             break;
                         }
-                        measuredOffsetX = offset;
-                        offset += child.measuredSize.x;
+                        offset += child.measuredSize.x + marginL + marginR;
+                        break;
                     }
-                    child.measuredOffset.x = measuredOffsetX;
-                    child.measuredOffset.y = measuredOffsetY;
-                    console.log("W", child.measuredSize.x, "H", child.measuredSize.y, "X", child.measuredOffset.x, "Y", child.measuredOffset.y);
                 }
             }
         });
